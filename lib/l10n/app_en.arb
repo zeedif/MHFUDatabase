@@ -84,7 +84,7 @@
   },
   "aboutCreditResources": "Credits and Resources",
   "whatsNewTitle": "What's New?",
-  "whatsNewText": "Version {version}\n\nInitial Flutter release.",
+  "whatsNewText": "Version {version}\n\nEvery list screen gets a unified search and filter bar.",
   "@whatsNewText": {
     "placeholders": {
       "version": {

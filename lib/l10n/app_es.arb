@@ -77,7 +77,7 @@
   "aboutVersion": "Versión {version}",
   "aboutCreditResources": "Créditos y Recursos",
   "whatsNewTitle": "¿Qué hay de nuevo?",
-  "whatsNewText": "Versión {version}\n\nPrimer lanzamiento en Flutter.",
+  "whatsNewText": "Versión {version}\n\nCada pantalla de lista tiene una barra unificada de búsqueda y filtro.",
   "listEquipmentStats": "Atributos de equipo",
   "listActiveSkills": "Habilidades Activas",
   "listSkills": "Habilidades",
