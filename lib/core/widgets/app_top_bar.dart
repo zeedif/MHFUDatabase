@@ -29,7 +29,10 @@ class const AppTopBar({
       actions: [
         ...actions,
         if (onSearchTap != null)
-          IconButton(icon: const Icon(Icons.search), onPressed: onSearchTap),
+          IconButton(
+            icon: const Icon(Icons.travel_explore),
+            onPressed: onSearchTap,
+          ),
       ],
     );
   }

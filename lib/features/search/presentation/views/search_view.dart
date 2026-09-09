@@ -9,6 +9,7 @@ import '../../../../core/settings/app_settings_controller.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/theme/screen_padding.dart';
 import '../../../../core/widgets/app_h_divider.dart';
+import '../../../../core/widgets/app_search_field.dart';
 import '../../../../core/widgets/entity_icon.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/mhfu_colors.dart';
@@ -63,69 +64,21 @@ class _SearchViewState extends State<SearchView> {
     });
   }
 
-  void _onClear() {
-    _controller.clear();
-    _focusNode.requestFocus();
-    setState(() => _results = null);
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final colors = Theme.of(context).colorScheme;
-    final isCompact = Theme.of(context).visualDensity.horizontal < 0;
-    final barPadding = isCompact ? AppPadding.medium : AppPadding.small;
 
     return Scaffold(
       appBar: AppBar(
         scrolledUnderElevation: 0,
         titleSpacing: 0,
         automaticallyImplyLeading: false,
-        title: Padding(
-          padding: EdgeInsets.all(barPadding),
-          child: TextField(
-            controller: _controller,
-            focusNode: _focusNode,
-            style: Theme.of(context).textTheme.titleLarge,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: colors.surface,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.medium),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.medium,
-              ),
-              prefixIcon: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: widget.navigateBack,
-              ),
-              hint: Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Icon(Icons.search, size: AppSize.extraSmall),
-                  const SizedBox(width: AppSpacing.medium),
-                  Text(
-                    l10n.searchHint,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ],
-              ),
-              suffixIcon: ValueListenableBuilder(
-                valueListenable: _controller,
-                builder: (context, value, _) => value.text.isEmpty
-                    ? const SizedBox.shrink()
-                    : IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: _onClear,
-                      ),
-              ),
-            ),
-            textInputAction: TextInputAction.search,
-            onChanged: _onQueryChanged,
-          ),
+        title: AppSearchField(
+          controller: _controller,
+          focusNode: _focusNode,
+          hintText: l10n.searchHint,
+          onBack: widget.navigateBack,
+          onChanged: _onQueryChanged,
         ),
       ),
       body: _buildResults(l10n),

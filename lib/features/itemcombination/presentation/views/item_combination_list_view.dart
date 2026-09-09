@@ -6,8 +6,9 @@ import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/theme/screen_padding.dart';
 import '../../../../core/widgets/app_h_divider.dart';
 import '../../../../core/widgets/app_top_bar.dart';
-import '../../../../core/widgets/filter_dropdown.dart';
+import '../../../../core/widgets/filter_sheet_body.dart';
 import '../../../../core/widgets/pill_list_item.dart';
+import '../../../../core/widgets/selection_pill.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/item_combination_repository.dart';
 import '../../domain/item_combination.dart';
@@ -26,6 +27,17 @@ class const ItemCombinationListView({
 class _ItemCombinationListViewState extends State<ItemCombinationListView> {
   ItemCombinationType? _type;
 
+  Future<void> _openFilterSheet() {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => _CombinationFilterSheet(
+        type: _type,
+        onFilterChange: (type) => setState(() => _type = type),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -36,52 +48,56 @@ class _ItemCombinationListViewState extends State<ItemCombinationListView> {
         navigation: AppTopBarNavigation.menu,
         onNavigationTap: widget.openDrawer,
         onSearchTap: widget.openSearch,
-      ),
-      body: Column(
-        children: [
-          _TypeFilter(
-            type: _type,
-            onFilterChange: (type) => setState(() => _type = type),
-          ),
-          Expanded(
-            child: FutureBuilder<List<ItemCombination>>(
-              future: ItemCombinationRepository().getItemCombinationList(
-                AppSettingsController.instance.locale.languageCode,
-                type: _type,
-              ),
-              builder: (context, snapshot) {
-                final combinations = snapshot.data;
-                if (combinations == null) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                return ListView.separated(
-                  padding: context.scrollPadding(
-                    const EdgeInsets.fromLTRB(
-                      AppPadding.medium,
-                      0,
-                      AppPadding.medium,
-                      AppPadding.small,
-                    ),
-                  ),
-                  itemCount: combinations.length,
-                  separatorBuilder: (context, index) => const AppHDivider(),
-                  itemBuilder: (context, index) => PillListItem(
-                    child: CombinationRow(combination: combinations[index]),
-                  ),
-                );
-              },
-            ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: _openFilterSheet,
           ),
         ],
+      ),
+      body: FutureBuilder<List<ItemCombination>>(
+        future: ItemCombinationRepository().getItemCombinationList(
+          AppSettingsController.instance.locale.languageCode,
+          type: _type,
+        ),
+        builder: (context, snapshot) {
+          final combinations = snapshot.data;
+          if (combinations == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return ListView.separated(
+            padding: context.scrollPadding(
+              const EdgeInsets.fromLTRB(
+                AppPadding.medium,
+                0,
+                AppPadding.medium,
+                AppPadding.small,
+              ),
+            ),
+            itemCount: combinations.length,
+            separatorBuilder: (context, index) => const AppHDivider(),
+            itemBuilder: (context, index) => PillListItem(
+              child: CombinationRow(combination: combinations[index]),
+            ),
+          );
+        },
       ),
     );
   }
 }
 
-class const _TypeFilter({
+class const _CombinationFilterSheet({
   required final ItemCombinationType? type,
   required final ValueChanged<ItemCombinationType?> onFilterChange,
-}) extends StatelessWidget {
+}) extends StatefulWidget {
+  @override
+  State<_CombinationFilterSheet> createState() =>
+      _CombinationFilterSheetState();
+}
+
+class _CombinationFilterSheetState extends State<_CombinationFilterSheet> {
+  late ItemCombinationType? _type = widget.type;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -93,17 +109,30 @@ class const _TypeFilter({
       null => l10n.combinationFilterTypeAll,
     };
 
-    return Padding(
-      padding: const EdgeInsets.all(AppPadding.medium),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: FilterDropdown<ItemCombinationType?>(
-          value: type,
-          items: const [null, ...ItemCombinationType.values],
-          labelBuilder: labelFor,
-          onChanged: onFilterChange,
+    return FilterSheetBody(
+      children: [
+        Text(
+          l10n.combinationFilterType,
+          style: Theme.of(context).textTheme.titleMedium,
         ),
-      ),
+        const SizedBox(height: AppSpacing.medium),
+        Wrap(
+          spacing: AppSpacing.small,
+          runSpacing: AppSpacing.small,
+          children: [
+            for (final type in [null, ...ItemCombinationType.values])
+              SelectionPill(
+                selected: _type == type,
+                onTap: () {
+                  setState(() => _type = type);
+                  widget.onFilterChange(type);
+                },
+                compact: true,
+                child: Text(labelFor(type)),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

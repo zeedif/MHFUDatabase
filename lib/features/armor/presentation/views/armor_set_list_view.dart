@@ -9,12 +9,12 @@ import '../../../../core/theme/screen_padding.dart';
 import '../../../../core/widgets/app_h_divider.dart';
 import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/widgets/entity_icon.dart';
-import '../../../../core/widgets/filter_dropdown.dart';
-import '../../../../core/widgets/filter_pill.dart';
-import '../../../../core/widgets/filter_sheet.dart';
+import '../../../../core/widgets/filter_sheet_body.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/mhfu_colors.dart';
 import '../../../../core/widgets/pill_list_item.dart';
+import '../../../../core/widgets/search_filter_app_bar.dart';
+import '../../../../core/widgets/selection_pill.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/armor_repository.dart';
 import '../../domain/armor_filter.dart';
@@ -36,103 +36,100 @@ class _ArmorSetListViewState extends State<ArmorSetListView> {
 
   void _setFilter(ArmorSetFilter filter) => setState(() => _filter = filter);
 
+  Future<void> _openFilterSheet() {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) =>
+          _ArmorSetFilterSheet(filter: _filter, onFilterChange: _setFilter),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppTopBar(
+      appBar: SearchFilterAppBar(
         title: l10n.screenArmorSetList,
         navigation: AppTopBarNavigation.menu,
         onNavigationTap: widget.openDrawer,
-        onSearchTap: widget.openSearch,
-      ),
-      body: Column(
-        children: [
-          _ArmorSetFilterBar(filter: _filter, onFilterChange: _setFilter),
-          Expanded(
-            child: FutureBuilder<List<ArmorSet>>(
-              future: ArmorRepository().getArmorSetList(
-                AppSettingsController.instance.locale.languageCode,
-                filter: _filter,
-              ),
-              builder: (context, snapshot) {
-                final armorSets = snapshot.data;
-                if (armorSets == null) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                return ListView.separated(
-                  padding: context.scrollPadding(
-                    const EdgeInsets.fromLTRB(
-                      AppPadding.medium,
-                      0,
-                      AppPadding.medium,
-                      AppPadding.small,
-                    ),
-                  ),
-                  itemCount: armorSets.length,
-                  separatorBuilder: (context, index) => const AppHDivider(),
-                  itemBuilder: (context, index) {
-                    final armorSet = armorSets[index];
-                    return PillListItem(
-                      child: ListItemLayout(
-                        leading: EntityIcon(
-                          asset: 'ic_armor_set',
-                          tint: rarityColor(armorSet.rarity),
-                        ),
-                        headline: Text(
-                          armorSet.name,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                        onTap: () => context.push(
-                          AppRoutes.armorSetDetail(armorSet.id),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+        onQueryChanged: (name) => _setFilter(
+          ArmorSetFilter(
+            name: name.isEmpty ? null : name,
+            rarity: _filter.rarity,
+            hunterType: _filter.hunterType,
+            gender: _filter.gender,
           ),
-        ],
+        ),
+        onGlobalSearch: widget.openSearch,
+        onFilterTap: _openFilterSheet,
+      ),
+      body: FutureBuilder<List<ArmorSet>>(
+        future: ArmorRepository().getArmorSetList(
+          AppSettingsController.instance.locale.languageCode,
+          filter: _filter,
+        ),
+        builder: (context, snapshot) {
+          final armorSets = snapshot.data;
+          if (armorSets == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return ListView.separated(
+            padding: context.scrollPadding(
+              const EdgeInsets.fromLTRB(
+                AppPadding.medium,
+                0,
+                AppPadding.medium,
+                AppPadding.small,
+              ),
+            ),
+            itemCount: armorSets.length,
+            separatorBuilder: (context, index) => const AppHDivider(),
+            itemBuilder: (context, index) {
+              final armorSet = armorSets[index];
+              return PillListItem(
+                child: ListItemLayout(
+                  leading: EntityIcon(
+                    asset: 'ic_armor_set',
+                    tint: rarityColor(armorSet.rarity),
+                  ),
+                  headline: Text(
+                    armorSet.name,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  onTap: () =>
+                      context.push(AppRoutes.armorSetDetail(armorSet.id)),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }
 }
 
-class const _ArmorSetFilterBar({
+class const _ArmorSetFilterSheet({
   required final ArmorSetFilter filter,
   required final ValueChanged<ArmorSetFilter> onFilterChange,
 }) extends StatefulWidget {
   @override
-  State<_ArmorSetFilterBar> createState() => _ArmorSetFilterBarState();
+  State<_ArmorSetFilterSheet> createState() => _ArmorSetFilterSheetState();
 }
 
-class _ArmorSetFilterBarState extends State<_ArmorSetFilterBar> {
-  bool _rarityOpen = false;
+class _ArmorSetFilterSheetState extends State<_ArmorSetFilterSheet> {
+  late ArmorSetFilter _filter = widget.filter;
 
-  Future<void> _openRaritySheet(AppLocalizations l10n) async {
-    setState(() => _rarityOpen = true);
-    await showFilterSheet<int>(
-      context: context,
-      title: l10n.armorSetFilterRarity,
-      items: _armorSetRarities,
-      selectedItems: widget.filter.rarity ?? const [],
-      onItemsSelected: (rarity) =>
-          widget.onFilterChange(widget.filter.copyWith(rarity: rarity)),
-      itemBuilder: (rarity, isSelected, onTap) => FilterPill(
-        selected: isSelected,
-        onTap: onTap,
-        child: Text(rarity.toString()),
-      ),
-    );
-    if (mounted) setState(() => _rarityOpen = false);
+  void _update(ArmorSetFilter filter) {
+    setState(() => _filter = filter);
+    widget.onFilterChange(filter);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final filter = widget.filter;
+    final rarities = _filter.rarity ?? const <int>[];
 
     String labelForHunter(HunterType? hunterType) => switch (hunterType) {
       HunterType.blade => l10n.armorSetFilterHunterBlade,
@@ -146,57 +143,94 @@ class _ArmorSetFilterBarState extends State<_ArmorSetFilterBar> {
       Gender.both || null => l10n.armorSetFilterGenderAll,
     };
 
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.all(AppPadding.medium),
-        child: Row(
+    return FilterSheetBody(
+      children: [
+        Text(
+          l10n.armorSetFilterHunter,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: AppSpacing.medium),
+        Wrap(
+          spacing: AppSpacing.small,
+          runSpacing: AppSpacing.small,
           children: [
-            FilterDropdown<HunterType?>(
-              value: filter.hunterType,
-              items: const [null, HunterType.blade, HunterType.gunner],
-              labelBuilder: labelForHunter,
-              onChanged: (hunterType) => widget.onFilterChange(
-                filter.copyWith(hunterType: hunterType),
+            for (final hunterType in const [
+              null,
+              HunterType.blade,
+              HunterType.gunner,
+            ])
+              SelectionPill(
+                selected: _filter.hunterType == hunterType,
+                onTap: () => _update(
+                  ArmorSetFilter(
+                    name: _filter.name,
+                    rarity: _filter.rarity,
+                    hunterType: hunterType,
+                    gender: _filter.gender,
+                  ),
+                ),
+                compact: true,
+                child: Text(labelForHunter(hunterType)),
               ),
-            ),
-            const SizedBox(width: AppSpacing.medium),
-            FilterDropdown<Gender?>(
-              value: filter.gender,
-              items: const [null, Gender.male, Gender.female],
-              labelBuilder: labelForGender,
-              onChanged: (gender) =>
-                  widget.onFilterChange(filter.copyWith(gender: gender)),
-            ),
-            const SizedBox(width: AppSpacing.medium),
-            FilterPill(
-              selected: _rarityOpen,
-              onTap: () => _openRaritySheet(l10n),
-              child: Text(l10n.armorSetFilterRarity),
-            ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-extension on ArmorSetFilter {
-  ArmorSetFilter copyWith({
-    HunterType? hunterType,
-    Gender? gender,
-    List<int>? rarity,
-  }) {
-    return ArmorSetFilter(
-      name: name,
-      rank: rank,
-      hunterType: hunterType ?? this.hunterType,
-      gender: gender ?? this.gender,
-      skills: skills,
-      rarity: (rarity ?? this.rarity)?.isEmpty ?? true
-          ? null
-          : rarity ?? this.rarity,
+        const SizedBox(height: AppSpacing.large),
+        Text(
+          l10n.armorSetFilterGender,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: AppSpacing.medium),
+        Wrap(
+          spacing: AppSpacing.small,
+          runSpacing: AppSpacing.small,
+          children: [
+            for (final gender in const [null, Gender.male, Gender.female])
+              SelectionPill(
+                selected: _filter.gender == gender,
+                onTap: () => _update(
+                  ArmorSetFilter(
+                    name: _filter.name,
+                    rarity: _filter.rarity,
+                    hunterType: _filter.hunterType,
+                    gender: gender,
+                  ),
+                ),
+                compact: true,
+                child: Text(labelForGender(gender)),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.large),
+        Text(
+          l10n.armorSetFilterRarity,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: AppSpacing.medium),
+        Wrap(
+          spacing: AppSpacing.small,
+          runSpacing: AppSpacing.small,
+          children: [
+            for (final rarity in _armorSetRarities)
+              SelectionPill(
+                selected: rarities.contains(rarity),
+                onTap: () {
+                  final updated = rarities.contains(rarity)
+                      ? (rarities.toList()..remove(rarity))
+                      : (rarities.toList()..add(rarity));
+                  _update(
+                    ArmorSetFilter(
+                      name: _filter.name,
+                      hunterType: _filter.hunterType,
+                      gender: _filter.gender,
+                      rarity: updated.isEmpty ? null : updated,
+                    ),
+                  );
+                },
+                child: Text(rarity.toString()),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/database/localized_collation.dart';
 import '../../../../core/domain/enums.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/settings/app_settings_controller.dart';
@@ -9,6 +10,7 @@ import '../../../../core/theme/screen_padding.dart';
 import '../../../../core/widgets/app_h_divider.dart';
 import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/widgets/entity_icon.dart';
+import '../../../../core/widgets/search_filter_app_bar.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/weapon_repository.dart';
 import '../../domain/weapon.dart';
@@ -19,19 +21,27 @@ class const WeaponTreeView({
   required final VoidCallback navigateBack,
   required final VoidCallback openSearch,
   super.key,
-}) extends StatelessWidget {
+}) extends StatefulWidget {
+  @override
+  State<WeaponTreeView> createState() => _WeaponTreeViewState();
+}
+
+class _WeaponTreeViewState extends State<WeaponTreeView> {
+  String _query = '';
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final type = WeaponType.fromDb(weaponType);
+    final type = WeaponType.fromDb(widget.weaponType);
     final title = weaponTypeLabel(l10n, type);
 
     return Scaffold(
-      appBar: AppTopBar(
+      appBar: SearchFilterAppBar(
         title: title,
         navigation: AppTopBarNavigation.back,
-        onNavigationTap: navigateBack,
-        onSearchTap: openSearch,
+        onNavigationTap: widget.navigateBack,
+        onQueryChanged: (query) => setState(() => _query = query),
+        onGlobalSearch: widget.openSearch,
       ),
       body: FutureBuilder<List<FlattenedWeaponNode>>(
         future: WeaponRepository().getWeaponTree(
@@ -43,6 +53,17 @@ class const WeaponTreeView({
           if (nodes == null) {
             return const Center(child: CircularProgressIndicator());
           }
+
+          final query = normalizeForSearch(_query);
+          final filtered = query.isEmpty
+              ? nodes
+              : nodes
+                    .where(
+                      (node) =>
+                          normalizeForSearch(node.weapon.name).contains(query),
+                    )
+                    .toList();
+
           return ListView.separated(
             padding: context.scrollPadding(
               const EdgeInsets.fromLTRB(
@@ -52,12 +73,13 @@ class const WeaponTreeView({
                 AppPadding.small,
               ),
             ),
-            itemCount: nodes.length,
+            itemCount: filtered.length,
             separatorBuilder: (context, index) => const AppHDivider(),
             itemBuilder: (context, index) {
-              final node = nodes[index];
+              final node = filtered[index];
+              final depth = query.isEmpty ? node.depth : 0;
               return Padding(
-                padding: EdgeInsets.only(left: AppPadding.small * node.depth),
+                padding: EdgeInsets.only(left: AppPadding.small * depth),
                 child: _WeaponTreeTile(weapon: node.weapon),
               );
             },

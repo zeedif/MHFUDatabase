@@ -6,13 +6,14 @@ import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/theme/screen_padding.dart';
 import '../../../../core/widgets/app_h_divider.dart';
 import '../../../../core/widgets/entity_icon.dart';
+import '../../../../core/widgets/filter_sheet_body.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/pill_list_item.dart';
+import '../../../../core/widgets/selection_pill.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../weapon/data/weapon_repository.dart';
 import '../../../weapon/domain/weapon_filter.dart';
 import '../../../weapon/domain/weapon.dart';
-import '../widgets/selection_pill.dart';
 import '../widgets/selection_search_bar.dart';
 
 const _rarities = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -120,112 +121,114 @@ class _WeaponFilterSheetState extends State<_WeaponFilterSheet> {
     final rarities = _filter.rarity ?? const <int>[];
     final numberOfSlots = _filter.numberOfSlots ?? const <int>[];
 
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppPadding.large),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return FilterSheetBody(
+      children: [
+        Text(
+          l10n.userSetFilterWeaponType,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: AppSpacing.medium),
+        Wrap(
+          spacing: AppSpacing.small,
+          runSpacing: AppSpacing.small,
           children: [
-            Text(l10n.userSetFilterWeaponType, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: AppSpacing.medium),
-            Wrap(
-              spacing: AppSpacing.small,
-              runSpacing: AppSpacing.small,
-              children: [
-                for (final type in WeaponType.forHunterType(
-                  _filter.hunterType ?? HunterType.both,
-                ))
-                  SelectionPill(
-                    selected: weaponTypes.contains(type),
-                    onTap: () => _apply(
-                      _filter.copyWith(
-                        weaponType: weaponTypes.contains(type)
-                            ? (weaponTypes.toList()..remove(type))
-                            : (weaponTypes.toList()..add(type)),
-                      ),
-                    ),
-                    child: Image.asset(
-                      'assets/images/${weaponTypeIconAsset(type)}.webp',
-                      width: AppSize.small,
-                      height: AppSize.small,
-                    ),
+            for (final type in WeaponType.forHunterType(
+              _filter.hunterType ?? HunterType.both,
+            ))
+              SelectionPill(
+                selected: weaponTypes.contains(type),
+                onTap: () => _apply(
+                  _filter.copyWith(
+                    weaponType: weaponTypes.contains(type)
+                        ? (weaponTypes.toList()..remove(type))
+                        : (weaponTypes.toList()..add(type)),
                   ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.large),
-            Text(l10n.userSetFilterElementType, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: AppSpacing.medium),
-            Wrap(
-              spacing: AppSpacing.small,
-              runSpacing: AppSpacing.small,
-              children: [
-                for (final element in WeaponElement.values)
-                  SelectionPill(
-                    selected: elementTypes.contains(element),
-                    onTap: () => _apply(
-                      _filter.copyWith(
-                        elementType: elementTypes.contains(element)
-                            ? (elementTypes.toList()..remove(element))
-                            : (elementTypes.toList()..add(element)),
-                      ),
-                    ),
-                    child: Image.asset(
-                      'assets/images/${elementIconAsset(element)}.webp',
-                      width: AppSize.small,
-                      height: AppSize.small,
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.large),
-            Text(l10n.userSetFilterRarity, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: AppSpacing.medium),
-            Wrap(
-              spacing: AppSpacing.small,
-              runSpacing: AppSpacing.small,
-              children: [
-                for (final rarity in _rarities)
-                  SelectionPill(
-                    selected: rarities.contains(rarity),
-                    onTap: () => _apply(
-                      _filter.copyWith(
-                        rarity: rarities.contains(rarity)
-                            ? (rarities.toList()..remove(rarity))
-                            : (rarities.toList()..add(rarity)),
-                      ),
-                    ),
-                    child: Text('$rarity'),
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.large),
-            Text(
-              l10n.userSetFilterNumberOfSlots,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: AppSpacing.medium),
-            Wrap(
-              spacing: AppSpacing.small,
-              runSpacing: AppSpacing.small,
-              children: [
-                for (final slots in _slotOptions)
-                  SelectionPill(
-                    selected: numberOfSlots.contains(slots),
-                    onTap: () => _apply(
-                      _filter.copyWith(
-                        numberOfSlots: numberOfSlots.contains(slots)
-                            ? (numberOfSlots.toList()..remove(slots))
-                            : (numberOfSlots.toList()..add(slots)),
-                      ),
-                    ),
-                    child: Text('$slots'),
-                  ),
-              ],
-            ),
+                ),
+                child: Image.asset(
+                  'assets/images/${weaponTypeIconAsset(type)}.webp',
+                  width: AppSize.small,
+                  height: AppSize.small,
+                ),
+              ),
           ],
         ),
-      ),
+        const SizedBox(height: AppSpacing.large),
+        Text(
+          l10n.userSetFilterElementType,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: AppSpacing.medium),
+        Wrap(
+          spacing: AppSpacing.small,
+          runSpacing: AppSpacing.small,
+          children: [
+            for (final element in WeaponElement.values)
+              SelectionPill(
+                selected: elementTypes.contains(element),
+                onTap: () => _apply(
+                  _filter.copyWith(
+                    elementType: elementTypes.contains(element)
+                        ? (elementTypes.toList()..remove(element))
+                        : (elementTypes.toList()..add(element)),
+                  ),
+                ),
+                child: Image.asset(
+                  'assets/images/${elementIconAsset(element)}.webp',
+                  width: AppSize.small,
+                  height: AppSize.small,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.large),
+        Text(
+          l10n.userSetFilterRarity,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: AppSpacing.medium),
+        Wrap(
+          spacing: AppSpacing.small,
+          runSpacing: AppSpacing.small,
+          children: [
+            for (final rarity in _rarities)
+              SelectionPill(
+                selected: rarities.contains(rarity),
+                onTap: () => _apply(
+                  _filter.copyWith(
+                    rarity: rarities.contains(rarity)
+                        ? (rarities.toList()..remove(rarity))
+                        : (rarities.toList()..add(rarity)),
+                  ),
+                ),
+                child: Text('$rarity'),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.large),
+        Text(
+          l10n.userSetFilterNumberOfSlots,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: AppSpacing.medium),
+        Wrap(
+          spacing: AppSpacing.small,
+          runSpacing: AppSpacing.small,
+          children: [
+            for (final slots in _slotOptions)
+              SelectionPill(
+                selected: numberOfSlots.contains(slots),
+                onTap: () => _apply(
+                  _filter.copyWith(
+                    numberOfSlots: numberOfSlots.contains(slots)
+                        ? (numberOfSlots.toList()..remove(slots))
+                        : (numberOfSlots.toList()..add(slots)),
+                  ),
+                ),
+                child: Text('$slots'),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -246,7 +249,9 @@ extension on WeaponFilter {
       elementType: (elementType ?? this.elementType)?.isEmpty ?? true
           ? null
           : elementType ?? this.elementType,
-      rarity: (rarity ?? this.rarity)?.isEmpty ?? true ? null : rarity ?? this.rarity,
+      rarity: (rarity ?? this.rarity)?.isEmpty ?? true
+          ? null
+          : rarity ?? this.rarity,
       numberOfSlots: (numberOfSlots ?? this.numberOfSlots)?.isEmpty ?? true
           ? null
           : numberOfSlots ?? this.numberOfSlots,

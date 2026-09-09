@@ -10,29 +10,42 @@ import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/widgets/entity_icon.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/pill_list_item.dart';
+import '../../../../core/widgets/search_filter_app_bar.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/location_repository.dart';
+import '../../domain/location_filter.dart';
 import '../../domain/location.dart';
 
 class const LocationListView({
   required final VoidCallback openDrawer,
   required final VoidCallback openSearch,
   super.key,
-}) extends StatelessWidget {
+}) extends StatefulWidget {
+  @override
+  State<LocationListView> createState() => _LocationListViewState();
+}
+
+class _LocationListViewState extends State<LocationListView> {
+  LocationFilter _filter = const LocationFilter();
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppTopBar(
+      appBar: SearchFilterAppBar(
         title: l10n.screenLocationList,
         navigation: AppTopBarNavigation.menu,
-        onNavigationTap: openDrawer,
-        onSearchTap: openSearch,
+        onNavigationTap: widget.openDrawer,
+        onQueryChanged: (name) => setState(
+          () => _filter = LocationFilter(name: name.isEmpty ? null : name),
+        ),
+        onGlobalSearch: widget.openSearch,
       ),
       body: FutureBuilder<List<Location>>(
         future: LocationRepository().getLocationList(
           AppSettingsController.instance.locale.languageCode,
+          filter: _filter,
         ),
         builder: (context, snapshot) {
           final locations = snapshot.data;

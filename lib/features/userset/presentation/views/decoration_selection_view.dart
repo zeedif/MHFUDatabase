@@ -5,15 +5,16 @@ import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/theme/screen_padding.dart';
 import '../../../../core/widgets/app_h_divider.dart';
 import '../../../../core/widgets/entity_icon.dart';
+import '../../../../core/widgets/filter_sheet_body.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/mhfu_colors.dart';
 import '../../../../core/widgets/pill_list_item.dart';
+import '../../../../core/widgets/selection_pill.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../decoration/data/decoration_repository.dart';
 import '../../../decoration/domain/decoration_filter.dart';
 import '../../../decoration/domain/decoration.dart';
 import '../../../skill/domain/skill.dart';
-import '../widgets/selection_pill.dart';
 import '../widgets/selection_search_bar.dart';
 import 'skill_selection_view.dart';
 
@@ -101,8 +102,7 @@ class _DecorationSelectionViewState extends State<DecorationSelectionView> {
 class const _DecorationFilterSheet({required final DecorationFilter filter})
     extends StatefulWidget {
   @override
-  State<_DecorationFilterSheet> createState() =>
-      _DecorationFilterSheetState();
+  State<_DecorationFilterSheet> createState() => _DecorationFilterSheetState();
 }
 
 class _DecorationFilterSheetState extends State<_DecorationFilterSheet> {
@@ -114,9 +114,12 @@ class _DecorationFilterSheetState extends State<_DecorationFilterSheet> {
   }
 
   Future<void> _addSkillFilter() async {
-    final skillTree = await Navigator.of(
-      context,
-    ).push<SkillTree>(MaterialPageRoute(builder: (_) => const SkillSelectionView()));
+    final skillTree =
+        await Navigator.of(
+          context,
+        ).push<SkillTree>(
+          MaterialPageRoute(builder: (_) => const SkillSelectionView()),
+        );
     if (skillTree == null || !mounted) return;
     final skills = _filter.skills ?? const <SkillTree>[];
     if (skills.any((skill) => skill.id == skillTree.id)) return;
@@ -132,63 +135,59 @@ class _DecorationFilterSheetState extends State<_DecorationFilterSheet> {
       for (var slot = 1; slot <= _filter.maxAvailableSlots!; slot++) slot,
     ];
 
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppPadding.large),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return FilterSheetBody(
+      children: [
+        Text(
+          l10n.userSetFilterSkill,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: AppSpacing.medium),
+        Wrap(
+          spacing: AppSpacing.small,
+          runSpacing: AppSpacing.small,
           children: [
-            Text(l10n.userSetFilterSkill, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: AppSpacing.medium),
-            Wrap(
-              spacing: AppSpacing.small,
-              runSpacing: AppSpacing.small,
-              children: [
-                for (final skill in skills)
-                  SelectionPill(
-                    selected: true,
-                    onTap: () => _apply(
-                      _filter.copyWith(
-                        skills: skills.where((s) => s.id != skill.id).toList(),
-                      ),
-                    ),
-                    child: Text(skill.name),
+            for (final skill in skills)
+              SelectionPill(
+                selected: true,
+                onTap: () => _apply(
+                  _filter.copyWith(
+                    skills: skills.where((s) => s.id != skill.id).toList(),
                   ),
-                SelectionPill(
-                  selected: false,
-                  onTap: _addSkillFilter,
-                  child: const Icon(Icons.add),
                 ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.large),
-            Text(
-              l10n.userSetFilterNumberOfSlots,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: AppSpacing.medium),
-            Wrap(
-              spacing: AppSpacing.small,
-              runSpacing: AppSpacing.small,
-              children: [
-                for (final slots in slotOptions)
-                  SelectionPill(
-                    selected: numberOfSlots.contains(slots),
-                    onTap: () => _apply(
-                      _filter.copyWith(
-                        numberOfSlots: numberOfSlots.contains(slots)
-                            ? (numberOfSlots.toList()..remove(slots))
-                            : (numberOfSlots.toList()..add(slots)),
-                      ),
-                    ),
-                    child: Text('$slots'),
-                  ),
-              ],
+                child: Text(skill.name),
+              ),
+            SelectionPill(
+              selected: false,
+              onTap: _addSkillFilter,
+              child: const Icon(Icons.add),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: AppSpacing.large),
+        Text(
+          l10n.userSetFilterNumberOfSlots,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: AppSpacing.medium),
+        Wrap(
+          spacing: AppSpacing.small,
+          runSpacing: AppSpacing.small,
+          children: [
+            for (final slots in slotOptions)
+              SelectionPill(
+                selected: numberOfSlots.contains(slots),
+                onTap: () => _apply(
+                  _filter.copyWith(
+                    numberOfSlots: numberOfSlots.contains(slots)
+                        ? (numberOfSlots.toList()..remove(slots))
+                        : (numberOfSlots.toList()..add(slots)),
+                  ),
+                ),
+                child: Text('$slots'),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -204,7 +203,9 @@ extension on DecorationFilter {
       numberOfSlots: (numberOfSlots ?? this.numberOfSlots)?.isEmpty ?? true
           ? null
           : numberOfSlots ?? this.numberOfSlots,
-      skills: (skills ?? this.skills)?.isEmpty ?? true ? null : skills ?? this.skills,
+      skills: (skills ?? this.skills)?.isEmpty ?? true
+          ? null
+          : skills ?? this.skills,
     );
   }
 }

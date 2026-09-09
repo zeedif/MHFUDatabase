@@ -11,29 +11,42 @@ import '../../../../core/widgets/entity_icon.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/mhfu_colors.dart';
 import '../../../../core/widgets/pill_list_item.dart';
+import '../../../../core/widgets/search_filter_app_bar.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/decoration_repository.dart';
+import '../../domain/decoration_filter.dart';
 import '../../domain/decoration.dart';
 
 class const DecorationListView({
   required final VoidCallback openDrawer,
   required final VoidCallback openSearch,
   super.key,
-}) extends StatelessWidget {
+}) extends StatefulWidget {
+  @override
+  State<DecorationListView> createState() => _DecorationListViewState();
+}
+
+class _DecorationListViewState extends State<DecorationListView> {
+  DecorationFilter _filter = const DecorationFilter();
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppTopBar(
+      appBar: SearchFilterAppBar(
         title: l10n.screenDecorationList,
         navigation: AppTopBarNavigation.menu,
-        onNavigationTap: openDrawer,
-        onSearchTap: openSearch,
+        onNavigationTap: widget.openDrawer,
+        onQueryChanged: (name) => setState(
+          () => _filter = DecorationFilter(name: name.isEmpty ? null : name),
+        ),
+        onGlobalSearch: widget.openSearch,
       ),
       body: FutureBuilder<List<Decoration>>(
         future: DecorationRepository().getDecorationList(
           AppSettingsController.instance.locale.languageCode,
+          filter: _filter,
         ),
         builder: (context, snapshot) {
           final decorations = snapshot.data;

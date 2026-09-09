@@ -9,11 +9,12 @@ import '../../../../core/theme/screen_padding.dart';
 import '../../../../core/widgets/app_h_divider.dart';
 import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/widgets/entity_icon.dart';
-import '../../../../core/widgets/filter_pill.dart';
-import '../../../../core/widgets/filter_sheet.dart';
+import '../../../../core/widgets/filter_sheet_body.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/mhfu_colors.dart';
 import '../../../../core/widgets/pill_list_item.dart';
+import '../../../../core/widgets/search_filter_app_bar.dart';
+import '../../../../core/widgets/selection_pill.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/item_repository.dart';
 import '../../domain/item_filter.dart';
@@ -35,164 +36,167 @@ class _ItemListViewState extends State<ItemListView> {
 
   void _setFilter(ItemFilter filter) => setState(() => _filter = filter);
 
+  Future<void> _openFilterSheet() {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) =>
+          _ItemFilterSheet(filter: _filter, onFilterChange: _setFilter),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppTopBar(
+      appBar: SearchFilterAppBar(
         title: l10n.screenItemList,
         navigation: AppTopBarNavigation.menu,
         onNavigationTap: widget.openDrawer,
-        onSearchTap: widget.openSearch,
+        onQueryChanged: (name) => _setFilter(_filter.copyWith(name: name)),
+        onGlobalSearch: widget.openSearch,
+        onFilterTap: _openFilterSheet,
       ),
-      body: Column(
-        children: [
-          _ItemFilterBar(filter: _filter, onFilterChange: _setFilter),
-          Expanded(
-            child: FutureBuilder<List<Item>>(
-              future: ItemRepository().getItemList(
-                AppSettingsController.instance.locale.languageCode,
-                filter: _filter,
-              ),
-              builder: (context, snapshot) {
-                final items = snapshot.data;
-                if (items == null) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+      body: FutureBuilder<List<Item>>(
+        future: ItemRepository().getItemList(
+          AppSettingsController.instance.locale.languageCode,
+          filter: _filter,
+        ),
+        builder: (context, snapshot) {
+          final items = snapshot.data;
+          if (items == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-                return ListView.separated(
-                  padding: context.scrollPadding(
-                    const EdgeInsets.fromLTRB(
-                      AppPadding.medium,
-                      0,
-                      AppPadding.medium,
-                      AppPadding.small,
-                    ),
-                  ),
-                  itemCount: items.length,
-                  separatorBuilder: (context, index) => const AppHDivider(),
-                  itemBuilder: (context, index) =>
-                      PillListItem(child: _ItemRow(item: items[index])),
-                );
-              },
+          return ListView.separated(
+            padding: context.scrollPadding(
+              const EdgeInsets.fromLTRB(
+                AppPadding.medium,
+                0,
+                AppPadding.medium,
+                AppPadding.small,
+              ),
             ),
-          ),
-        ],
+            itemCount: items.length,
+            separatorBuilder: (context, index) => const AppHDivider(),
+            itemBuilder: (context, index) =>
+                PillListItem(child: _ItemRow(item: items[index])),
+          );
+        },
       ),
     );
   }
 }
 
-class const _ItemFilterBar({
+class const _ItemFilterSheet({
   required final ItemFilter filter,
   required final ValueChanged<ItemFilter> onFilterChange,
 }) extends StatefulWidget {
   @override
-  State<_ItemFilterBar> createState() => _ItemFilterBarState();
+  State<_ItemFilterSheet> createState() => _ItemFilterSheetState();
 }
 
-class _ItemFilterBarState extends State<_ItemFilterBar> {
-  bool _rarityOpen = false;
-  bool _iconOpen = false;
-  bool _colorOpen = false;
+class _ItemFilterSheetState extends State<_ItemFilterSheet> {
+  late ItemFilter _filter = widget.filter;
 
-  Future<void> _openRaritySheet(AppLocalizations l10n) async {
-    setState(() => _rarityOpen = true);
-    await showFilterSheet<int>(
-      context: context,
-      title: l10n.itemFilterRarity,
-      items: _itemRarities,
-      selectedItems: widget.filter.rarity ?? const [],
-      onItemsSelected: (rarity) =>
-          widget.onFilterChange(widget.filter.copyWith(rarity: rarity)),
-      itemBuilder: (rarity, isSelected, onTap) => FilterPill(
-        selected: isSelected,
-        onTap: onTap,
-        child: Text(rarity.toString()),
-      ),
-    );
-    if (mounted) setState(() => _rarityOpen = false);
-  }
-
-  Future<void> _openIconSheet(AppLocalizations l10n) async {
-    setState(() => _iconOpen = true);
-    await showFilterSheet<ItemIconType>(
-      context: context,
-      title: l10n.itemFilterIcon,
-      items: ItemIconType.values,
-      selectedItems: widget.filter.icons ?? const [],
-      onItemsSelected: (icons) =>
-          widget.onFilterChange(widget.filter.copyWith(icons: icons)),
-      itemBuilder: (icon, isSelected, onTap) => FilterPill(
-        selected: isSelected,
-        onTap: onTap,
-        child: Image.asset(
-          'assets/images/${itemIconAsset(icon)}.webp',
-          width: AppSize.extraSmall,
-          height: AppSize.extraSmall,
-        ),
-      ),
-    );
-    if (mounted) setState(() => _iconOpen = false);
-  }
-
-  Future<void> _openColorSheet(AppLocalizations l10n) async {
-    setState(() => _colorOpen = true);
-    await showFilterSheet<ItemIconColor>(
-      context: context,
-      title: l10n.itemFilterColor,
-      items: ItemIconColor.values,
-      selectedItems: widget.filter.iconColors ?? const [],
-      onItemsSelected: (colors) =>
-          widget.onFilterChange(widget.filter.copyWith(iconColors: colors)),
-      itemBuilder: (color, isSelected, onTap) => FilterPill(
-        selected: isSelected,
-        onTap: onTap,
-        child: Container(
-          width: AppSize.extraSmall,
-          height: AppSize.extraSmall,
-          decoration: BoxDecoration(
-            color: itemIconColorValue(color),
-            shape: BoxShape.circle,
-          ),
-        ),
-      ),
-    );
-    if (mounted) setState(() => _colorOpen = false);
+  void _update(ItemFilter filter) {
+    setState(() => _filter = filter);
+    widget.onFilterChange(filter);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final rarities = _filter.rarity ?? const <int>[];
+    final icons = _filter.icons ?? const <ItemIconType>[];
+    final colors = _filter.iconColors ?? const <ItemIconColor>[];
 
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.all(AppPadding.medium),
-        child: Row(
+    return FilterSheetBody(
+      children: [
+        Text(
+          l10n.itemFilterRarity,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: AppSpacing.medium),
+        Wrap(
+          spacing: AppSpacing.small,
+          runSpacing: AppSpacing.small,
           children: [
-            FilterPill(
-              selected: _rarityOpen,
-              onTap: () => _openRaritySheet(l10n),
-              child: Text(l10n.itemFilterRarity),
-            ),
-            const SizedBox(width: AppSpacing.medium),
-            FilterPill(
-              selected: _iconOpen,
-              onTap: () => _openIconSheet(l10n),
-              child: Text(l10n.itemFilterIcon),
-            ),
-            const SizedBox(width: AppSpacing.medium),
-            FilterPill(
-              selected: _colorOpen,
-              onTap: () => _openColorSheet(l10n),
-              child: Text(l10n.itemFilterColor),
-            ),
+            for (final rarity in _itemRarities)
+              SelectionPill(
+                selected: rarities.contains(rarity),
+                onTap: () => _update(
+                  _filter.copyWith(
+                    rarity: rarities.contains(rarity)
+                        ? (rarities.toList()..remove(rarity))
+                        : (rarities.toList()..add(rarity)),
+                  ),
+                ),
+                child: Text('$rarity'),
+              ),
           ],
         ),
-      ),
+        const SizedBox(height: AppSpacing.large),
+        Text(
+          l10n.itemFilterIcon,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: AppSpacing.medium),
+        Wrap(
+          spacing: AppSpacing.small,
+          runSpacing: AppSpacing.small,
+          children: [
+            for (final icon in ItemIconType.values)
+              SelectionPill(
+                selected: icons.contains(icon),
+                onTap: () => _update(
+                  _filter.copyWith(
+                    icons: icons.contains(icon)
+                        ? (icons.toList()..remove(icon))
+                        : (icons.toList()..add(icon)),
+                  ),
+                ),
+                child: Image.asset(
+                  'assets/images/${itemIconAsset(icon)}.webp',
+                  width: AppSize.extraSmall,
+                  height: AppSize.extraSmall,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.large),
+        Text(
+          l10n.itemFilterColor,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: AppSpacing.medium),
+        Wrap(
+          spacing: AppSpacing.small,
+          runSpacing: AppSpacing.small,
+          children: [
+            for (final color in ItemIconColor.values)
+              SelectionPill(
+                selected: colors.contains(color),
+                onTap: () => _update(
+                  _filter.copyWith(
+                    iconColors: colors.contains(color)
+                        ? (colors.toList()..remove(color))
+                        : (colors.toList()..add(color)),
+                  ),
+                ),
+                child: Container(
+                  width: AppSize.extraSmall,
+                  height: AppSize.extraSmall,
+                  decoration: BoxDecoration(
+                    color: itemIconColorValue(color),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -217,12 +221,13 @@ class const _ItemRow({required final Item item}) extends StatelessWidget {
 
 extension on ItemFilter {
   ItemFilter copyWith({
+    String? name,
     List<int>? rarity,
     List<ItemIconType>? icons,
     List<ItemIconColor>? iconColors,
   }) {
     return ItemFilter(
-      name: name,
+      name: (name ?? this.name)?.isEmpty ?? true ? null : name ?? this.name,
       rarity: (rarity ?? this.rarity)?.isEmpty ?? true
           ? null
           : rarity ?? this.rarity,

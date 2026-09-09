@@ -10,8 +10,10 @@ import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/widgets/entity_icon.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/pill_list_item.dart';
+import '../../../../core/widgets/search_filter_app_bar.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/veggie_repository.dart';
+import '../../domain/veggie_filter.dart';
 import '../../domain/veggie.dart';
 
 String _areaLabel(AppLocalizations l10n, int area) =>
@@ -21,21 +23,32 @@ class const VeggieListView({
   required final VoidCallback openDrawer,
   required final VoidCallback openSearch,
   super.key,
-}) extends StatelessWidget {
+}) extends StatefulWidget {
+  @override
+  State<VeggieListView> createState() => _VeggieListViewState();
+}
+
+class _VeggieListViewState extends State<VeggieListView> {
+  VeggieFilter _filter = const VeggieFilter();
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppTopBar(
+      appBar: SearchFilterAppBar(
         title: l10n.screenVeggieList,
         navigation: AppTopBarNavigation.menu,
-        onNavigationTap: openDrawer,
-        onSearchTap: openSearch,
+        onNavigationTap: widget.openDrawer,
+        onQueryChanged: (name) => setState(
+          () => _filter = VeggieFilter(name: name.isEmpty ? null : name),
+        ),
+        onGlobalSearch: widget.openSearch,
       ),
       body: FutureBuilder<List<VeggieLocation>>(
         future: VeggieRepository().getVeggieLocationList(
           AppSettingsController.instance.locale.languageCode,
+          filter: _filter,
         ),
         builder: (context, snapshot) {
           final veggieLocations = snapshot.data;
