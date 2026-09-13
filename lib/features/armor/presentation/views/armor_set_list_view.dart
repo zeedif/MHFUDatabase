@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/domain/enums.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../../core/settings/list_filter_preferences.dart';
 import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/widgets/app_top_bar.dart';
@@ -32,7 +33,11 @@ class const ArmorSetListView({
 
 class _ArmorSetListViewState extends State<ArmorSetListView>
     with LanguageFetchMixin<ArmorSet, ArmorSetListView> {
-  ArmorSetFilter _filter = const ArmorSetFilter();
+  ArmorSetFilter _filter = ArmorSetFilter(
+    rarity: ListFilterPreferences.instance.armorSetRarity,
+    hunterType: ListFilterPreferences.instance.armorSetHunterType,
+    gender: ListFilterPreferences.instance.armorSetGender,
+  );
 
   @override
   Future<List<ArmorSet>> fetchItems(String language) =>
@@ -44,8 +49,16 @@ class _ArmorSetListViewState extends State<ArmorSetListView>
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (context) =>
-          _ArmorSetFilterSheet(filter: _filter, onFilterChange: _setFilter),
+      builder: (context) => _ArmorSetFilterSheet(
+        filter: _filter,
+        onFilterChange: (filter) {
+          _setFilter(filter);
+          final prefs = ListFilterPreferences.instance;
+          prefs.setArmorSetRarity(filter.rarity);
+          prefs.setArmorSetHunterType(filter.hunterType);
+          prefs.setArmorSetGender(filter.gender);
+        },
+      ),
     );
   }
 

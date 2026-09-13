@@ -250,7 +250,7 @@ class _UserSetDetailViewState extends State<UserSetDetailView> {
           onTap: () =>
               setState(() => _activeSkillsExpanded = !_activeSkillsExpanded),
           child: activeSkills.isEmpty
-              ? _NoneText(text: l10n.userSetNone)
+              ? ListItemLayout(headline: Text(l10n.userSetNone))
               : Column(
                   children: [
                     for (final (index, skill) in activeSkills.indexed) ...[
@@ -271,7 +271,7 @@ class _UserSetDetailViewState extends State<UserSetDetailView> {
           expanded: _skillsExpanded,
           onTap: () => setState(() => _skillsExpanded = !_skillsExpanded),
           child: skills.isEmpty
-              ? _NoneText(text: l10n.userSetNone)
+              ? ListItemLayout(headline: Text(l10n.userSetNone))
               : SkillPoints(skills: skills),
         ),
         const SizedBox(height: AppSpacing.medium),
@@ -334,7 +334,7 @@ class _UserSetDetailViewState extends State<UserSetDetailView> {
           onTap: () =>
               setState(() => _decorationsExpanded = !_decorationsExpanded),
           child: decorationSummary.isEmpty
-              ? _NoneText(text: l10n.userSetNone)
+              ? ListItemLayout(headline: Text(l10n.userSetNone))
               : Column(
                   children: [
                     for (final (index, decoration)
@@ -362,23 +362,10 @@ class _UserSetDetailViewState extends State<UserSetDetailView> {
           expanded: _recipeExpanded,
           onTap: () => setState(() => _recipeExpanded = !_recipeExpanded),
           child: recipe.isEmpty
-              ? _NoneText(text: l10n.userSetNone)
+              ? ListItemLayout(headline: Text(l10n.userSetNone))
               : EquipmentRecipe(recipe: recipe),
         ),
       ],
-    );
-  }
-}
-
-class const _NoneText({required final String text}) extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.large,
-        vertical: AppSpacing.medium,
-      ),
-      child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
     );
   }
 }

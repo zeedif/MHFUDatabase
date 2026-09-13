@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/domain/enums.dart';
@@ -113,58 +114,9 @@ void _showRewardInfoDialog(BuildContext context) {
     context,
     title: l10n.monsterRewardInfoTitle,
     children: [
-      InfoSectionHeader(text: l10n.monsterRewardInfoRankCategoriesHeader),
-      InfoBullet(
-        label: l10n.monsterRewardInfoRankBeginnerLabel,
-        description: l10n.monsterRewardInfoRankBeginnerDescription,
-      ),
-      InfoBullet(
-        label: l10n.monsterRewardInfoRankLowLabel,
-        description: l10n.monsterRewardInfoRankLowDescription,
-      ),
-      InfoBullet(
-        label: l10n.monsterRewardInfoRankHighLabel,
-        description: l10n.monsterRewardInfoRankHighDescription,
-      ),
-      InfoBullet(
-        label: l10n.monsterRewardInfoRankGLabel,
-        description: l10n.monsterRewardInfoRankGDescription,
-      ),
-      InfoBullet(
-        label: l10n.monsterRewardInfoRankTreasureLabel,
-        description: l10n.monsterRewardInfoRankTreasureDescription,
-      ),
-      InfoBullet(
-        label: l10n.monsterRewardInfoRankTrainingLabel,
-        description: l10n.monsterRewardInfoRankTrainingDescription,
-      ),
-      const SizedBox(height: AppSpacing.medium),
-      InfoSectionHeader(text: l10n.monsterRewardInfoRewardsHeader),
-      InfoBullet(
-        label: l10n.monsterRewardInfoShinyDropLabel,
-        description: l10n.monsterRewardInfoShinyDropDescription,
-      ),
-      InfoBullet(
-        label: l10n.monsterRewardInfoCarvingLabel,
-        description: l10n.monsterRewardInfoCarvingDescription,
-      ),
-      InfoBullet(
-        label: l10n.monsterRewardInfoCaptureLabel,
-        description: l10n.monsterRewardInfoCaptureDescription,
-      ),
-      InfoBullet(
-        label: l10n.monsterRewardInfoBreakablesLabel,
-        description: l10n.monsterRewardInfoBreakablesDescription,
-      ),
-      InfoBullet(
-        label: l10n.monsterRewardInfoDropRatesLabel,
-        description: l10n.monsterRewardInfoDropRatesDescription,
-      ),
-      const SizedBox(height: AppSpacing.medium),
-      InfoSectionHeader(text: l10n.monsterRewardInfoNoteHeader),
-      Text(
-        l10n.monsterRewardInfoNoteDescription,
-        style: Theme.of(context).textTheme.bodyMedium,
+      MarkdownBody(
+        data: l10n.monsterRewardInfoContent,
+        styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)),
       ),
     ],
   );

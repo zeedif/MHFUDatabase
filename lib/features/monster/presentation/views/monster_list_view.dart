@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/domain/enums.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../../core/settings/list_filter_preferences.dart';
 import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/widgets/app_top_bar.dart';
@@ -29,7 +30,9 @@ class const MonsterListView({
 
 class _MonsterListViewState extends State<MonsterListView>
     with LanguageFetchMixin<Monster, MonsterListView> {
-  MonsterFilter _filter = const MonsterFilter();
+  MonsterFilter _filter = MonsterFilter(
+    type: ListFilterPreferences.instance.monsterType,
+  );
 
   @override
   Future<List<Monster>> fetchItems(String language) =>
@@ -41,8 +44,13 @@ class _MonsterListViewState extends State<MonsterListView>
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (context) =>
-          _MonsterFilterSheet(filter: _filter, onFilterChange: _setFilter),
+      builder: (context) => _MonsterFilterSheet(
+        filter: _filter,
+        onFilterChange: (filter) {
+          _setFilter(filter);
+          ListFilterPreferences.instance.setMonsterType(filter.type);
+        },
+      ),
     );
   }
 

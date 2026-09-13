@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/domain/enums.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../../core/settings/list_filter_preferences.dart';
 import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/widgets/app_top_bar.dart';
@@ -32,7 +33,11 @@ class const ItemListView({
 
 class _ItemListViewState extends State<ItemListView>
     with LanguageFetchMixin<Item, ItemListView> {
-  ItemFilter _filter = const ItemFilter();
+  ItemFilter _filter = ItemFilter(
+    rarity: ListFilterPreferences.instance.itemRarity,
+    icons: ListFilterPreferences.instance.itemIcons,
+    iconColors: ListFilterPreferences.instance.itemIconColors,
+  );
 
   @override
   Future<List<Item>> fetchItems(String language) =>
@@ -44,8 +49,16 @@ class _ItemListViewState extends State<ItemListView>
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (context) =>
-          _ItemFilterSheet(filter: _filter, onFilterChange: _setFilter),
+      builder: (context) => _ItemFilterSheet(
+        filter: _filter,
+        onFilterChange: (filter) {
+          _setFilter(filter);
+          final prefs = ListFilterPreferences.instance;
+          prefs.setItemRarity(filter.rarity);
+          prefs.setItemIcons(filter.icons);
+          prefs.setItemIconColors(filter.iconColors);
+        },
+      ),
     );
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/domain/enums.dart';
+import '../../../../core/settings/list_filter_preferences.dart';
 import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/widgets/app_top_bar.dart';
@@ -25,7 +26,8 @@ class const ItemCombinationListView({
 
 class _ItemCombinationListViewState extends State<ItemCombinationListView>
     with LanguageFetchMixin<ItemCombination, ItemCombinationListView> {
-  ItemCombinationType? _type;
+  ItemCombinationType? _type = ListFilterPreferences.instance
+      .itemCombinationType;
 
   @override
   Future<List<ItemCombination>> fetchItems(String language) =>
@@ -37,7 +39,10 @@ class _ItemCombinationListViewState extends State<ItemCombinationListView>
       isScrollControlled: true,
       builder: (context) => _CombinationFilterSheet(
         type: _type,
-        onFilterChange: (type) => setState(() => _type = type),
+        onFilterChange: (type) {
+          setState(() => _type = type);
+          ListFilterPreferences.instance.setItemCombinationType(type);
+        },
       ),
     );
   }

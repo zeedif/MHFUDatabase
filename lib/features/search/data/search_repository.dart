@@ -12,6 +12,7 @@ import '../../monster/domain/monster.dart';
 import '../../quest/domain/quest.dart';
 import '../../skill/domain/skill.dart';
 import '../../weapon/domain/weapon.dart';
+import '../domain/search_entity_type.dart';
 import '../domain/search_results.dart';
 
 class SearchRepository {
@@ -20,8 +21,18 @@ class SearchRepository {
 
   final AppDatabase _db;
 
-  Future<SearchResults> search(String query, String language) async {
+  /// Runs only the sub-queries whose type is in [activeTypes] — a `null`
+  /// entry (the default) means every type, so existing callers keep
+  /// searching everything. A deactivated type's query is skipped entirely
+  /// rather than run and filtered out afterward.
+  Future<SearchResults> search(
+    String query,
+    String language, [
+    Set<SearchEntityType>? activeTypes,
+  ]) async {
     final normalized = normalizeForSearch(query);
+    bool isActive(SearchEntityType type) =>
+        activeTypes == null || activeTypes.contains(type);
 
     final (
       armors,
@@ -34,15 +45,33 @@ class SearchRepository {
       skills,
       weapons,
     ) = await (
-      _searchArmors(normalized, language),
-      _searchDecorations(normalized, language),
-      _searchItems(normalized, language),
-      _searchLocations(normalized, language),
-      _searchMonsters(normalized, language),
-      _searchQuests(normalized, language),
-      _searchSkillTrees(normalized, language),
-      _searchSkills(normalized, language),
-      _searchWeapons(normalized, language),
+      isActive(SearchEntityType.armor)
+          ? _searchArmors(normalized, language)
+          : Future.value(const <Armor>[]),
+      isActive(SearchEntityType.decoration)
+          ? _searchDecorations(normalized, language)
+          : Future.value(const <Decoration>[]),
+      isActive(SearchEntityType.item)
+          ? _searchItems(normalized, language)
+          : Future.value(const <Item>[]),
+      isActive(SearchEntityType.location)
+          ? _searchLocations(normalized, language)
+          : Future.value(const <Location>[]),
+      isActive(SearchEntityType.monster)
+          ? _searchMonsters(normalized, language)
+          : Future.value(const <Monster>[]),
+      isActive(SearchEntityType.quest)
+          ? _searchQuests(normalized, language)
+          : Future.value(const <Quest>[]),
+      isActive(SearchEntityType.skillTree)
+          ? _searchSkillTrees(normalized, language)
+          : Future.value(const <SkillTree>[]),
+      isActive(SearchEntityType.skill)
+          ? _searchSkills(normalized, language)
+          : Future.value(const <Skill>[]),
+      isActive(SearchEntityType.weapon)
+          ? _searchWeapons(normalized, language)
+          : Future.value(const <Weapon>[]),
     ).wait;
 
     return SearchResults(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/domain/enums.dart';
@@ -12,6 +13,7 @@ import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/widgets/button_page.dart';
 import '../../../../core/widgets/entity_icon.dart';
 import '../../../../core/widgets/filter_dropdown.dart';
+import '../../../../core/widgets/info_dialog.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/quest_group_label.dart';
 import '../../../../core/widgets/section_card.dart';
@@ -151,20 +153,15 @@ void _showMapDialog(
 
 void _showGatheringInfoDialog(BuildContext context) {
   final l10n = AppLocalizations.of(context)!;
-  showDialog<void>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(l10n.locationGatheringInfoTitle),
-      content: SingleChildScrollView(
-        child: Text(l10n.locationGatheringInfoContent),
+  showInfoDialog(
+    context,
+    title: l10n.locationGatheringInfoTitle,
+    children: [
+      MarkdownBody(
+        data: l10n.locationGatheringInfoContent,
+        styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(MaterialLocalizations.of(context).okButtonLabel),
-        ),
-      ],
-    ),
+    ],
   );
 }
 

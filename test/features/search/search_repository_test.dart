@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mhfudatabase/core/database/app_database.dart' show AppDatabase;
 import 'package:mhfudatabase/core/database/localized_collation.dart';
 import 'package:mhfudatabase/features/search/data/search_repository.dart';
+import 'package:mhfudatabase/features/search/domain/search_entity_type.dart';
 
 void main() {
   late AppDatabase database;
@@ -40,5 +41,15 @@ void main() {
   test('returns empty results for a nonsense query', () async {
     final results = await repository.search('zzzznonexistentzzzz', 'en');
     expect(results.isEmpty, isTrue);
+  });
+
+  test('skips queries for deactivated entity types', () async {
+    final results = await repository.search('rathalos', 'en', {
+      SearchEntityType.weapon,
+    });
+
+    expect(results.weapons, isNotEmpty);
+    expect(results.armors, isEmpty);
+    expect(results.monsters, isEmpty);
   });
 }

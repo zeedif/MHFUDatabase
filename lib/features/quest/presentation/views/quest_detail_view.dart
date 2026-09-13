@@ -114,6 +114,7 @@ class const _SummaryPage({
       children: [
         SurfaceCard(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DetailHeader(
                 icon: QuestGoalIcon(goal: quest.goalType),

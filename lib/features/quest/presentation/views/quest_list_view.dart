@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/domain/enums.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../../core/settings/list_filter_preferences.dart';
 import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/theme/screen_padding.dart';
@@ -76,7 +77,10 @@ class const QuestListView({
 
 class _QuestListViewState extends State<QuestListView>
     with LanguageFetchMixin<Quest, QuestListView> {
-  QuestFilter _filter = const QuestFilter(hub: HubType.village);
+  QuestFilter _filter = QuestFilter(
+    hub: ListFilterPreferences.instance.questHub,
+    type: ListFilterPreferences.instance.questType,
+  );
   Set<QuestGroup> _expanded = {};
 
   @override
@@ -94,8 +98,15 @@ class _QuestListViewState extends State<QuestListView>
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (context) =>
-          _QuestFilterSheet(filter: _filter, onFilterChange: _setFilter),
+      builder: (context) => _QuestFilterSheet(
+        filter: _filter,
+        onFilterChange: (filter) {
+          _setFilter(filter);
+          final prefs = ListFilterPreferences.instance;
+          prefs.setQuestHub(filter.hub);
+          prefs.setQuestType(filter.type);
+        },
+      ),
     );
   }
 
