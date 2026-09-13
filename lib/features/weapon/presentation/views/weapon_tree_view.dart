@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -57,35 +59,86 @@ class _WeaponTreeViewState extends State<WeaponTreeView>
           : Builder(
               builder: (context) {
                 final query = normalizeForSearch(_query);
-                final filtered = query.isEmpty
-                    ? nodes
-                    : nodes
-                          .where(
-                            (node) => normalizeForSearch(
-                              node.weapon.name,
-                            ).contains(query),
-                          )
-                          .toList();
 
-                return ListView.separated(
-                  padding: context.scrollPadding(
-                    const EdgeInsets.fromLTRB(
-                      AppPadding.medium,
-                      0,
-                      AppPadding.medium,
-                      AppPadding.small,
-                    ),
-                  ),
-                  itemCount: filtered.length,
-                  separatorBuilder: (context, index) => const AppHDivider(),
-                  itemBuilder: (context, index) {
-                    final node = filtered[index];
-                    final depth = query.isEmpty ? node.depth : 0;
-                    return Padding(
-                      padding: EdgeInsets.only(
-                        left: AppPadding.small * depth,
+                if (query.isNotEmpty) {
+                  final filtered = nodes
+                      .where(
+                        (node) => normalizeForSearch(
+                          node.weapon.name,
+                        ).contains(query),
+                      )
+                      .toList();
+
+                  return ListView.separated(
+                    padding: context.scrollPadding(
+                      const EdgeInsets.fromLTRB(
+                        AppPadding.medium,
+                        0,
+                        AppPadding.medium,
+                        AppPadding.small,
                       ),
-                      child: _WeaponTreeTile(weapon: node.weapon),
+                    ),
+                    itemCount: filtered.length,
+                    separatorBuilder: (context, index) => const AppHDivider(),
+                    itemBuilder: (context, index) {
+                      final node = filtered[index];
+                      return _WeaponTreeTile(
+                        weapon: node.weapon,
+                        isLeaf: !node.hasChildren,
+                      );
+                    },
+                  );
+                }
+
+                final maxDepth = nodes.fold<int>(
+                  0,
+                  (max, node) => math.max(max, node.depth),
+                );
+                final treeWidth =
+                    maxDepth * _TreeGuides.indentWidth + _minTileWidth;
+
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SizedBox(
+                        width: math.max(constraints.maxWidth, treeWidth),
+                        child: ListView.separated(
+                          padding: context.scrollPadding(
+                            const EdgeInsets.fromLTRB(
+                              AppPadding.medium,
+                              0,
+                              AppPadding.medium,
+                              AppPadding.small,
+                            ),
+                          ),
+                          itemCount: nodes.length,
+                          separatorBuilder: (context, index) =>
+                              const AppHDivider(),
+                          itemBuilder: (context, index) {
+                            final node = nodes[index];
+                            return IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
+                                children: [
+                                  _TreeGuides(
+                                    depth: node.depth,
+                                    ancestorContinues: node.ancestorContinues,
+                                    isLastInGroup: node.isLastInGroup,
+                                  ),
+                                  Expanded(
+                                    child: _WeaponTreeTile(
+                                      weapon: node.weapon,
+                                      isLeaf: !node.hasChildren,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                     );
                   },
                 );
@@ -95,8 +148,96 @@ class _WeaponTreeViewState extends State<WeaponTreeView>
   }
 }
 
-class const _WeaponTreeTile({required final Weapon weapon})
-    extends StatelessWidget {
+const _minTileWidth = 260.0;
+
+/// Draws the ancestor guide lines and the elbow connecting a tree node to
+/// its parent, mimicking a file-explorer style tree instead of raw
+/// indentation.
+class _TreeGuides extends StatelessWidget {
+  const _TreeGuides({
+    required this.depth,
+    required this.ancestorContinues,
+    required this.isLastInGroup,
+  });
+
+  final int depth;
+  final List<bool> ancestorContinues;
+  final bool isLastInGroup;
+
+  static const indentWidth = 20.0;
+
+  @override
+  Widget build(BuildContext context) {
+    if (depth == 0) return const SizedBox.shrink();
+
+    return SizedBox(
+      width: depth * indentWidth,
+      child: CustomPaint(
+        painter: _TreeGuidePainter(
+          ancestorContinues: ancestorContinues,
+          isLastInGroup: isLastInGroup,
+          color: Theme.of(context).colorScheme.outlineVariant,
+        ),
+      ),
+    );
+  }
+}
+
+class _TreeGuidePainter extends CustomPainter {
+  _TreeGuidePainter({
+    required this.ancestorContinues,
+    required this.isLastInGroup,
+    required this.color,
+  });
+
+  final List<bool> ancestorContinues;
+  final bool isLastInGroup;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    for (var i = 0; i < ancestorContinues.length; i++) {
+      if (!ancestorContinues[i]) continue;
+      final x = (i + 0.5) * _TreeGuides.indentWidth;
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+
+    final ownColumn = ancestorContinues.length;
+    final x = (ownColumn + 0.5) * _TreeGuides.indentWidth;
+    final centerY = size.height / 2;
+
+    canvas.drawLine(Offset(x, 0), Offset(x, centerY), paint);
+    if (!isLastInGroup) {
+      canvas.drawLine(Offset(x, centerY), Offset(x, size.height), paint);
+    }
+    canvas.drawLine(Offset(x, centerY), Offset(size.width, centerY), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TreeGuidePainter oldDelegate) {
+    if (oldDelegate.isLastInGroup != isLastInGroup ||
+        oldDelegate.color != color ||
+        oldDelegate.ancestorContinues.length != ancestorContinues.length) {
+      return true;
+    }
+    for (var i = 0; i < ancestorContinues.length; i++) {
+      if (oldDelegate.ancestorContinues[i] != ancestorContinues[i]) {
+        return true;
+      }
+    }
+    return false;
+  }
+}
+
+class const _WeaponTreeTile({
+  required final Weapon weapon,
+  required final bool isLeaf,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -124,6 +265,12 @@ class const _WeaponTreeTile({required final Weapon weapon})
                       weapon.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: isLeaf ? FontWeight.bold : null,
+                        fontStyle: weapon.buildable
+                            ? FontStyle.italic
+                            : FontStyle.normal,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.small),
                     Row(

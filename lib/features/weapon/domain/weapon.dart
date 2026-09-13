@@ -93,4 +93,5 @@ class const FlattenedWeaponNode({
   required final int depth,
   required final bool hasChildren,
   required final bool isLastInGroup,
+  required final List<bool> ancestorContinues,
 });

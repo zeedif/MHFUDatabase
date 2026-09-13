@@ -406,7 +406,12 @@ class _WeaponGraph {
     final flattened = <FlattenedWeaponNode>[];
     var nextUniqueId = 0;
 
-    void flatten(WeaponNode node, int depth, bool isLast) {
+    void flatten(
+      WeaponNode node,
+      int depth,
+      bool isLast,
+      List<bool> ancestorContinues,
+    ) {
       flattened.add(
         FlattenedWeaponNode(
           uniqueId: nextUniqueId++,
@@ -414,18 +419,29 @@ class _WeaponGraph {
           depth: depth,
           hasChildren: node.children.isNotEmpty,
           isLastInGroup: isLast,
+          ancestorContinues: ancestorContinues,
         ),
       );
 
       final children = node.children.toList()
         ..sort((a, b) => a.weapon.rarity.compareTo(b.weapon.rarity));
+      // Roots (depth 0) are independent branches, not siblings under a
+      // shared parent, so they don't draw a guide column of their own.
+      final childAncestorContinues = depth == 0
+          ? const <bool>[]
+          : [...ancestorContinues, !isLast];
       for (var i = 0; i < children.length; i++) {
-        flatten(children[i], depth + 1, i == children.length - 1);
+        flatten(
+          children[i],
+          depth + 1,
+          i == children.length - 1,
+          childAncestorContinues,
+        );
       }
     }
 
     for (var i = 0; i < roots.length; i++) {
-      flatten(roots[i], 0, i == roots.length - 1);
+      flatten(roots[i], 0, i == roots.length - 1, const []);
     }
 
     return flattened;
