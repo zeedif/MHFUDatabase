@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
-import '../../../../core/settings/app_settings_controller.dart';
-import '../../../../core/theme/app_dimensions.dart';
-import '../../../../core/theme/screen_padding.dart';
-import '../../../../core/widgets/app_h_divider.dart';
+import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/widgets/entity_icon.dart';
+import '../../../../core/widgets/filterable_list_body.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/pill_list_item.dart';
 import '../../../../core/widgets/search_filter_app_bar.dart';
@@ -25,8 +23,13 @@ class const LocationListView({
   State<LocationListView> createState() => _LocationListViewState();
 }
 
-class _LocationListViewState extends State<LocationListView> {
+class _LocationListViewState extends State<LocationListView>
+    with LanguageFetchMixin<Location, LocationListView> {
   LocationFilter _filter = const LocationFilter();
+
+  @override
+  Future<List<Location>> fetchItems(String language) =>
+      LocationRepository().getLocationList(language);
 
   @override
   Widget build(BuildContext context) {
@@ -42,43 +45,19 @@ class _LocationListViewState extends State<LocationListView> {
         ),
         onGlobalSearch: widget.openSearch,
       ),
-      body: FutureBuilder<List<Location>>(
-        future: LocationRepository().getLocationList(
-          AppSettingsController.instance.locale.languageCode,
-          filter: _filter,
-        ),
-        builder: (context, snapshot) {
-          final locations = snapshot.data;
-          if (locations == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return ListView.separated(
-            padding: context.scrollPadding(
-              const EdgeInsets.fromLTRB(
-                AppPadding.medium,
-                0,
-                AppPadding.medium,
-                AppPadding.small,
-              ),
+      body: FilterableListBody<Location>(
+        items: items,
+        filter: _filter.matches,
+        itemBuilder: (context, location) => PillListItem(
+          child: ListItemLayout(
+            leading: EntityIcon(asset: locationIconAsset(location.id)),
+            headline: Text(
+              location.name,
+              style: Theme.of(context).textTheme.bodyLarge,
             ),
-            itemCount: locations.length,
-            separatorBuilder: (context, index) => const AppHDivider(),
-            itemBuilder: (context, index) {
-              final location = locations[index];
-              return PillListItem(
-                child: ListItemLayout(
-                  leading: EntityIcon(asset: locationIconAsset(location.id)),
-                  headline: Text(
-                    location.name,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  onTap: () =>
-                      context.push(AppRoutes.locationDetail(location.id)),
-                ),
-              );
-            },
-          );
-        },
+            onTap: () => context.push(AppRoutes.locationDetail(location.id)),
+          ),
+        ),
       ),
     );
   }

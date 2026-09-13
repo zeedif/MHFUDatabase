@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/domain/enums.dart';
-import '../../../../core/settings/app_settings_controller.dart';
+import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/theme/app_dimensions.dart';
-import '../../../../core/theme/screen_padding.dart';
-import '../../../../core/widgets/app_h_divider.dart';
 import '../../../../core/widgets/entity_icon.dart';
 import '../../../../core/widgets/filter_sheet_body.dart';
+import '../../../../core/widgets/filterable_list_body.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/mhfu_colors.dart';
 import '../../../../core/widgets/pill_list_item.dart';
@@ -32,12 +31,17 @@ class const ArmorSelectionView({
   State<ArmorSelectionView> createState() => _ArmorSelectionViewState();
 }
 
-class _ArmorSelectionViewState extends State<ArmorSelectionView> {
+class _ArmorSelectionViewState extends State<ArmorSelectionView>
+    with LanguageFetchMixin<Armor, ArmorSelectionView> {
   late ArmorFilter _filter = ArmorFilter(
     type: widget.type,
     hunterType: widget.hunterType,
     gender: widget.gender,
   );
+
+  @override
+  Future<List<Armor>> fetchItems(String language) =>
+      ArmorRepository().getArmorList(language);
 
   Future<void> _openFilterSheet() async {
     final updated = await showModalBottomSheet<ArmorFilter>(
@@ -66,43 +70,20 @@ class _ArmorSelectionViewState extends State<ArmorSelectionView> {
         ),
         onFilterTap: _openFilterSheet,
       ),
-      body: FutureBuilder<List<Armor>>(
-        future: ArmorRepository().getArmorList(
-          AppSettingsController.instance.locale.languageCode,
-          filter: _filter,
-        ),
-        builder: (context, snapshot) {
-          final armors = snapshot.data;
-          if (armors == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return ListView.separated(
-            padding: context.scrollPadding(
-              const EdgeInsets.fromLTRB(
-                AppPadding.medium,
-                0,
-                AppPadding.medium,
-                AppPadding.small,
-              ),
+      body: FilterableListBody<Armor>(
+        items: items,
+        filter: _filter.matches,
+        itemBuilder: (context, armor) => PillListItem(
+          child: ListItemLayout(
+            leading: EntityIcon(
+              asset: equipmentTypeIconAsset(armor.type),
+              size: AppSize.medium,
+              tint: rarityColor(armor.rarity),
             ),
-            itemCount: armors.length,
-            separatorBuilder: (context, index) => const AppHDivider(),
-            itemBuilder: (context, index) {
-              final armor = armors[index];
-              return PillListItem(
-                child: ListItemLayout(
-                  leading: EntityIcon(
-                    asset: equipmentTypeIconAsset(armor.type),
-                    size: AppSize.medium,
-                    tint: rarityColor(armor.rarity),
-                  ),
-                  headline: Text(armor.name),
-                  onTap: () => Navigator.of(context).pop(armor),
-                ),
-              );
-            },
-          );
-        },
+            headline: Text(armor.name),
+            onTap: () => Navigator.of(context).pop(armor),
+          ),
+        ),
       ),
     );
   }

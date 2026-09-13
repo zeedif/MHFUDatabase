@@ -23,16 +23,38 @@ class SearchRepository {
   Future<SearchResults> search(String query, String language) async {
     final normalized = normalizeForSearch(query);
 
+    final (
+      armors,
+      decorations,
+      items,
+      locations,
+      monsters,
+      quests,
+      skillTrees,
+      skills,
+      weapons,
+    ) = await (
+      _searchArmors(normalized, language),
+      _searchDecorations(normalized, language),
+      _searchItems(normalized, language),
+      _searchLocations(normalized, language),
+      _searchMonsters(normalized, language),
+      _searchQuests(normalized, language),
+      _searchSkillTrees(normalized, language),
+      _searchSkills(normalized, language),
+      _searchWeapons(normalized, language),
+    ).wait;
+
     return SearchResults(
-      armors: await _searchArmors(normalized, language),
-      decorations: await _searchDecorations(normalized, language),
-      items: await _searchItems(normalized, language),
-      locations: await _searchLocations(normalized, language),
-      monsters: await _searchMonsters(normalized, language),
-      quests: await _searchQuests(normalized, language),
-      skillTrees: await _searchSkillTrees(normalized, language),
-      skills: await _searchSkills(normalized, language),
-      weapons: await _searchWeapons(normalized, language),
+      armors: armors,
+      decorations: decorations,
+      items: items,
+      locations: locations,
+      monsters: monsters,
+      quests: quests,
+      skillTrees: skillTrees,
+      skills: skills,
+      weapons: weapons,
     );
   }
 
@@ -221,6 +243,7 @@ class SearchRepository {
           (row) => Quest(
             id: row.data['id'] as int,
             name: row.data['name'] as String,
+            locationId: row.data['location_id'] as int,
             goal: row.data['goal'] as String,
             client: row.data['client'] as String,
             description: row.data['description'] as String,

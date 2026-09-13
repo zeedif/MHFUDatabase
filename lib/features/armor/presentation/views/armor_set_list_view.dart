@@ -3,13 +3,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/domain/enums.dart';
 import '../../../../core/router/app_routes.dart';
-import '../../../../core/settings/app_settings_controller.dart';
+import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/theme/app_dimensions.dart';
-import '../../../../core/theme/screen_padding.dart';
-import '../../../../core/widgets/app_h_divider.dart';
 import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/widgets/entity_icon.dart';
 import '../../../../core/widgets/filter_sheet_body.dart';
+import '../../../../core/widgets/filterable_list_body.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/mhfu_colors.dart';
 import '../../../../core/widgets/pill_list_item.dart';
@@ -31,8 +30,13 @@ class const ArmorSetListView({
   State<ArmorSetListView> createState() => _ArmorSetListViewState();
 }
 
-class _ArmorSetListViewState extends State<ArmorSetListView> {
+class _ArmorSetListViewState extends State<ArmorSetListView>
+    with LanguageFetchMixin<ArmorSet, ArmorSetListView> {
   ArmorSetFilter _filter = const ArmorSetFilter();
+
+  @override
+  Future<List<ArmorSet>> fetchItems(String language) =>
+      ArmorRepository().getArmorSetList(language);
 
   void _setFilter(ArmorSetFilter filter) => setState(() => _filter = filter);
 
@@ -65,46 +69,22 @@ class _ArmorSetListViewState extends State<ArmorSetListView> {
         onGlobalSearch: widget.openSearch,
         onFilterTap: _openFilterSheet,
       ),
-      body: FutureBuilder<List<ArmorSet>>(
-        future: ArmorRepository().getArmorSetList(
-          AppSettingsController.instance.locale.languageCode,
-          filter: _filter,
-        ),
-        builder: (context, snapshot) {
-          final armorSets = snapshot.data;
-          if (armorSets == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return ListView.separated(
-            padding: context.scrollPadding(
-              const EdgeInsets.fromLTRB(
-                AppPadding.medium,
-                0,
-                AppPadding.medium,
-                AppPadding.small,
-              ),
+      body: FilterableListBody<ArmorSet>(
+        items: items,
+        filter: _filter.matches,
+        itemBuilder: (context, armorSet) => PillListItem(
+          child: ListItemLayout(
+            leading: EntityIcon(
+              asset: 'ic_armor_set',
+              tint: rarityColor(armorSet.rarity),
             ),
-            itemCount: armorSets.length,
-            separatorBuilder: (context, index) => const AppHDivider(),
-            itemBuilder: (context, index) {
-              final armorSet = armorSets[index];
-              return PillListItem(
-                child: ListItemLayout(
-                  leading: EntityIcon(
-                    asset: 'ic_armor_set',
-                    tint: rarityColor(armorSet.rarity),
-                  ),
-                  headline: Text(
-                    armorSet.name,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  onTap: () =>
-                      context.push(AppRoutes.armorSetDetail(armorSet.id)),
-                ),
-              );
-            },
-          );
-        },
+            headline: Text(
+              armorSet.name,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            onTap: () => context.push(AppRoutes.armorSetDetail(armorSet.id)),
+          ),
+        ),
       ),
     );
   }

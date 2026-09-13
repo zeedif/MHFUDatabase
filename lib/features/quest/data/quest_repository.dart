@@ -1,13 +1,11 @@
 import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart' show AppDatabase;
-import '../../../core/database/localized_collation.dart';
 import '../../../core/database/sql_args.dart';
 import '../../../core/domain/enums.dart';
 import '../../item/domain/item.dart';
 import '../../location/domain/location.dart';
 import '../../monster/domain/monster.dart';
-import '../domain/quest_filter.dart';
 import '../domain/quest.dart';
 
 class QuestRepository {
@@ -47,16 +45,8 @@ class QuestRepository {
     );
   }
 
-  Future<List<Quest>> getQuestList(
-    String language, {
-    QuestFilter filter = const QuestFilter(),
-  }) async {
+  Future<List<Quest>> getQuestList(String language) async {
     final args = SqlArgs();
-    final stars = filter.stars ?? const [];
-    final types = (filter.type ?? const []).map((type) => type.dbValue).toList();
-    final locations = filter.locations ?? const [];
-    final name = filter.name != null ? normalizeForSearch(filter.name!) : null;
-
     final rows = await _db.customSelect(
       '''
           SELECT quest.*, quest_text.*
@@ -64,16 +54,6 @@ class QuestRepository {
           JOIN quest_text
             ON quest.id = quest_text.quest_id
             AND quest_text.language = ${args.text(language)}
-          WHERE
-            (${args.text(name)} IS NULL OR quest_text.name_normalized LIKE '%' || ${args.text(name)} || '%')
-            AND (${args.text(filter.hub?.dbValue)} IS NULL OR quest.hub_type = ${args.text(filter.hub?.dbValue)})
-            AND (${args.flag(stars.isEmpty)} OR quest.stars IN ${args.integers(stars)}
-            )
-            AND (${args.flag(types.isEmpty)} OR quest.quest_type IN ${args.texts(types)}
-            )
-            AND (${args.text(filter.goal?.dbValue)} IS NULL OR quest.goal_type = ${args.text(filter.goal?.dbValue)})
-            AND (${args.flag(locations.isEmpty)} OR quest.location_id IN ${args.integers(locations)}
-            )
           ''',
       variables: args.variables,
     ).get();
@@ -211,6 +191,7 @@ class QuestRepository {
     return Quest(
       id: row.data['id'] as int,
       name: row.data['name'] as String,
+      locationId: row.data['location_id'] as int,
       goal: row.data['goal'] as String,
       client: row.data['client'] as String,
       description: row.data['description'] as String,

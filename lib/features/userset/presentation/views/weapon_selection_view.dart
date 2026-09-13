@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/domain/enums.dart';
-import '../../../../core/settings/app_settings_controller.dart';
+import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/theme/app_dimensions.dart';
-import '../../../../core/theme/screen_padding.dart';
-import '../../../../core/widgets/app_h_divider.dart';
 import '../../../../core/widgets/entity_icon.dart';
 import '../../../../core/widgets/filter_sheet_body.dart';
+import '../../../../core/widgets/filterable_list_body.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/pill_list_item.dart';
 import '../../../../core/widgets/selection_pill.dart';
@@ -27,8 +26,13 @@ class const WeaponSelectionView({
   State<WeaponSelectionView> createState() => _WeaponSelectionViewState();
 }
 
-class _WeaponSelectionViewState extends State<WeaponSelectionView> {
+class _WeaponSelectionViewState extends State<WeaponSelectionView>
+    with LanguageFetchMixin<Weapon, WeaponSelectionView> {
   late WeaponFilter _filter = WeaponFilter(hunterType: widget.hunterType);
+
+  @override
+  Future<List<Weapon>> fetchItems(String language) =>
+      WeaponRepository().getWeaponList(language);
 
   Future<void> _openFilterSheet() async {
     final updated = await showModalBottomSheet<WeaponFilter>(
@@ -56,44 +60,21 @@ class _WeaponSelectionViewState extends State<WeaponSelectionView> {
         ),
         onFilterTap: _openFilterSheet,
       ),
-      body: FutureBuilder<List<Weapon>>(
-        future: WeaponRepository().getWeaponList(
-          AppSettingsController.instance.locale.languageCode,
-          filter: _filter,
-        ),
-        builder: (context, snapshot) {
-          final weapons = snapshot.data;
-          if (weapons == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return ListView.separated(
-            padding: context.scrollPadding(
-              const EdgeInsets.fromLTRB(
-                AppPadding.medium,
-                0,
-                AppPadding.medium,
-                AppPadding.small,
-              ),
+      body: FilterableListBody<Weapon>(
+        items: items,
+        filter: _filter.matches,
+        itemBuilder: (context, weapon) => PillListItem(
+          child: ListItemLayout(
+            leading: WeaponEntityIcon(
+              type: weapon.type,
+              rarity: weapon.rarity,
+              size: AppSize.medium,
             ),
-            itemCount: weapons.length,
-            separatorBuilder: (context, index) => const AppHDivider(),
-            itemBuilder: (context, index) {
-              final weapon = weapons[index];
-              return PillListItem(
-                child: ListItemLayout(
-                  leading: WeaponEntityIcon(
-                    type: weapon.type,
-                    rarity: weapon.rarity,
-                    size: AppSize.medium,
-                  ),
-                  headline: Text(weapon.name),
-                  supporting: Text('${weapon.attack}'),
-                  onTap: () => Navigator.of(context).pop(weapon),
-                ),
-              );
-            },
-          );
-        },
+            headline: Text(weapon.name),
+            supporting: Text('${weapon.attack}'),
+            onTap: () => Navigator.of(context).pop(weapon),
+          ),
+        ),
       ),
     );
   }

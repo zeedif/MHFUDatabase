@@ -1,12 +1,10 @@
 import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart' show AppDatabase;
-import '../../../core/database/localized_collation.dart';
 import '../../../core/database/sql_args.dart';
 import '../../../core/domain/enums.dart';
 import '../../item/domain/item.dart';
 import '../../quest/domain/quest.dart';
-import '../domain/location_filter.dart';
 import '../domain/location.dart';
 
 class LocationRepository {
@@ -42,13 +40,8 @@ class LocationRepository {
     );
   }
 
-  Future<List<Location>> getLocationList(
-    String language, {
-    LocationFilter filter = const LocationFilter(),
-  }) async {
+  Future<List<Location>> getLocationList(String language) async {
     final args = SqlArgs();
-    final name = filter.name != null ? normalizeForSearch(filter.name!) : null;
-
     final rows = await _db.customSelect(
       '''
           SELECT location.*, location_text.*
@@ -56,8 +49,6 @@ class LocationRepository {
           JOIN location_text
             ON location.id = location_text.location_id
             AND location_text.language = ${args.text(language)}
-          WHERE
-            (${args.text(name)} IS NULL OR location_text.name_normalized LIKE '%' || ${args.text(name)} || '%')
           ORDER BY location_text.name ASC
           ''',
       variables: args.variables,
@@ -155,6 +146,7 @@ class LocationRepository {
     return Quest(
       id: row.data['id'] as int,
       name: row.data['name'] as String,
+      locationId: row.data['location_id'] as int,
       goal: row.data['goal'] as String,
       client: row.data['client'] as String,
       description: row.data['description'] as String,

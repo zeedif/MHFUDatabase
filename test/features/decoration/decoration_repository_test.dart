@@ -41,35 +41,29 @@ void main() {
     expect(decorations, isNotEmpty);
   });
 
-  test('getDecorationList filters by name', () async {
+  test('DecorationFilter.matches filters by name', () async {
     final all = await repository.getDecorationList('en');
     final target = all.first;
 
-    final filtered = await repository.getDecorationList(
-      'en',
-      filter: DecorationFilter(name: target.name),
-    );
+    final filtered = all.where(DecorationFilter(name: target.name).matches);
 
     expect(filtered.map((decoration) => decoration.id), contains(target.id));
   });
 
-  test('getDecorationList filters by skill', () async {
+  test('DecorationFilter.matches filters by skill', () async {
+    final all = await repository.getDecorationList('en');
     const skillTree = SkillTree(
       id: 2,
       name: '',
       category: SkillCategory.resistance,
     );
 
-    final filtered = await repository.getDecorationList(
-      'en',
-      filter: DecorationFilter(skills: [skillTree]),
-    );
+    final filtered = all.where(DecorationFilter(skills: [skillTree]).matches);
 
     expect(filtered, isNotEmpty);
     for (final decoration in filtered) {
-      final refetched = await repository.getDecoration(decoration.id, 'en');
       expect(
-        refetched.skills!.any((point) => point.skillTree.id == 2),
+        decoration.skills!.any((point) => point.skillTree.id == 2),
         isTrue,
       );
     }

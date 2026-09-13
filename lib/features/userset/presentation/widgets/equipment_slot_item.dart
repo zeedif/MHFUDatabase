@@ -30,7 +30,8 @@ class _EquipmentSlotItemState extends State<EquipmentSlotItem> {
     final l10n = AppLocalizations.of(context)!;
     final totalDecorationSlots = widget.decorations.fold<int>(
       0,
-      (sum, decoration) => sum + decoration.decoration.requiredSlots * decoration.quantity,
+      (sum, decoration) =>
+          sum + decoration.decoration.requiredSlots * decoration.quantity,
     );
     final availableSlots = widget.numberOfSlots - totalDecorationSlots;
 
@@ -45,7 +46,13 @@ class _EquipmentSlotItemState extends State<EquipmentSlotItem> {
                   numberOfSlots: widget.numberOfSlots,
                   filledColors: [
                     for (final decoration in widget.decorations)
-                      for (var i = 0; i < decoration.decoration.requiredSlots * decoration.quantity; i++)
+                      for (
+                        var i = 0;
+                        i <
+                            decoration.decoration.requiredSlots *
+                                decoration.quantity;
+                        i++
+                      )
                         itemIconColorValue(decoration.decoration.color),
                   ],
                 ),
@@ -60,11 +67,15 @@ class _EquipmentSlotItemState extends State<EquipmentSlotItem> {
               width: double.infinity,
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppPadding.small),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppPadding.small,
+                  ),
                   child: Icon(
                     totalDecorationSlots == 0
                         ? Icons.add
-                        : (_expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
+                        : (_expanded
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down),
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                     size: AppSize.extraSmall,
                   ),
@@ -104,7 +115,10 @@ class const _SlotPips({
                 child: Container(
                   width: AppSize.tiny * 0.6,
                   height: AppSize.tiny * 0.6,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: filledColor),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: filledColor,
+                  ),
                 ),
               ),
             ),
@@ -174,7 +188,9 @@ class const _DecorationList({
               width: double.infinity,
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppPadding.small),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppPadding.small,
+                  ),
                   child: Icon(
                     Icons.add,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,

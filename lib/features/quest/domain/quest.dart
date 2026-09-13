@@ -17,6 +17,7 @@ class const Quest({
   required final int reward,
   required final int fee,
   required final int timeLimit,
+  required final int locationId,
   final Location? location,
   final LocationDaytime? daytime,
   final List<Monster>? monsters,

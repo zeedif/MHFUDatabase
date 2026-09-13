@@ -3,13 +3,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/domain/enums.dart';
 import '../../../../core/router/app_routes.dart';
-import '../../../../core/settings/app_settings_controller.dart';
+import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/theme/app_dimensions.dart';
-import '../../../../core/theme/screen_padding.dart';
-import '../../../../core/widgets/app_h_divider.dart';
 import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/widgets/entity_icon.dart';
 import '../../../../core/widgets/filter_sheet_body.dart';
+import '../../../../core/widgets/filterable_list_body.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/mhfu_colors.dart';
 import '../../../../core/widgets/pill_list_item.dart';
@@ -31,8 +30,13 @@ class const ItemListView({
   State<ItemListView> createState() => _ItemListViewState();
 }
 
-class _ItemListViewState extends State<ItemListView> {
+class _ItemListViewState extends State<ItemListView>
+    with LanguageFetchMixin<Item, ItemListView> {
   ItemFilter _filter = const ItemFilter();
+
+  @override
+  Future<List<Item>> fetchItems(String language) =>
+      ItemRepository().getItemList(language);
 
   void _setFilter(ItemFilter filter) => setState(() => _filter = filter);
 
@@ -58,32 +62,11 @@ class _ItemListViewState extends State<ItemListView> {
         onGlobalSearch: widget.openSearch,
         onFilterTap: _openFilterSheet,
       ),
-      body: FutureBuilder<List<Item>>(
-        future: ItemRepository().getItemList(
-          AppSettingsController.instance.locale.languageCode,
-          filter: _filter,
-        ),
-        builder: (context, snapshot) {
-          final items = snapshot.data;
-          if (items == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          return ListView.separated(
-            padding: context.scrollPadding(
-              const EdgeInsets.fromLTRB(
-                AppPadding.medium,
-                0,
-                AppPadding.medium,
-                AppPadding.small,
-              ),
-            ),
-            itemCount: items.length,
-            separatorBuilder: (context, index) => const AppHDivider(),
-            itemBuilder: (context, index) =>
-                PillListItem(child: _ItemRow(item: items[index])),
-          );
-        },
+      body: FilterableListBody<Item>(
+        items: items,
+        filter: _filter.matches,
+        itemBuilder: (context, item) =>
+            PillListItem(child: _ItemRow(item: item)),
       ),
     );
   }

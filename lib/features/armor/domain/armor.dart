@@ -5,6 +5,7 @@ class const Armor({
   required final int id,
   required final int armorSetId,
   required final String name,
+  final String? fullName,
   required final String description,
   required final EquipmentType type,
   required final HunterType hunterType,

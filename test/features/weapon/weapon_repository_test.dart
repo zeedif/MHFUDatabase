@@ -95,10 +95,11 @@ void main() {
     expect(weapons, isNotEmpty);
   });
 
-  test('getWeaponList filters by weapon type', () async {
-    final weapons = await repository.getWeaponList(
-      'en',
-      filter: const WeaponFilter(weaponType: [WeaponType.bow]),
+  test('WeaponFilter.matches filters by weapon type', () async {
+    final all = await repository.getWeaponList('en');
+
+    final weapons = all.where(
+      const WeaponFilter(weaponType: [WeaponType.bow]).matches,
     );
 
     expect(weapons, isNotEmpty);

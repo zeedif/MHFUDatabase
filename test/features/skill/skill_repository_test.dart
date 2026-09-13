@@ -41,22 +41,20 @@ void main() {
     expect(skillTrees, isNotEmpty);
   });
 
-  test('getSkillTreeList filters by name', () async {
+  test('SkillTreeFilter.matches filters by name', () async {
     final all = await repository.getSkillTreeList('en');
     final target = all.first;
 
-    final filtered = await repository.getSkillTreeList(
-      'en',
-      filter: SkillTreeFilter(name: target.name),
-    );
+    final filtered = all.where(SkillTreeFilter(name: target.name).matches);
 
     expect(filtered.map((tree) => tree.id), contains(target.id));
   });
 
-  test('getSkillTreeList filters by category', () async {
-    final filtered = await repository.getSkillTreeList(
-      'en',
-      filter: const SkillTreeFilter(category: SkillCategory.resistance),
+  test('SkillTreeFilter.matches filters by category', () async {
+    final all = await repository.getSkillTreeList('en');
+
+    final filtered = all.where(
+      const SkillTreeFilter(category: SkillCategory.resistance).matches,
     );
 
     expect(filtered, isNotEmpty);

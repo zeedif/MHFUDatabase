@@ -4,6 +4,7 @@ import '../../../core/domain/shared.dart';
 class const Weapon({
   required final int id,
   required final String name,
+  final String? fullName,
   required final String description,
   required final WeaponType type,
   required final int rarity,

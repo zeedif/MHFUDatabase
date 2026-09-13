@@ -57,23 +57,21 @@ void main() {
     expect(monsters, isNotEmpty);
   });
 
-  test('getMonsterList filters by name', () async {
+  test('MonsterFilter.matches filters by name', () async {
     final all = await repository.getMonsterList('en');
     final target = all.first;
 
-    final filtered = await repository.getMonsterList(
-      'en',
-      filter: MonsterFilter(name: target.name),
-    );
+    final filtered = all.where(MonsterFilter(name: target.name).matches);
 
     expect(filtered, isNotEmpty);
     expect(filtered.map((monster) => monster.id), contains(target.id));
   });
 
-  test('getMonsterList filters by type', () async {
-    final filtered = await repository.getMonsterList(
-      'en',
-      filter: const MonsterFilter(type: MonsterType.large),
+  test('MonsterFilter.matches filters by type', () async {
+    final all = await repository.getMonsterList('en');
+
+    final filtered = all.where(
+      const MonsterFilter(type: MonsterType.large).matches,
     );
 
     expect(filtered, isNotEmpty);

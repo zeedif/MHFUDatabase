@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/domain/enums.dart';
-import '../../../../core/settings/app_settings_controller.dart';
+import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/theme/app_dimensions.dart';
-import '../../../../core/theme/screen_padding.dart';
-import '../../../../core/widgets/app_h_divider.dart';
 import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/widgets/filter_sheet_body.dart';
+import '../../../../core/widgets/filterable_list_body.dart';
 import '../../../../core/widgets/pill_list_item.dart';
 import '../../../../core/widgets/selection_pill.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -24,8 +23,13 @@ class const ItemCombinationListView({
       _ItemCombinationListViewState();
 }
 
-class _ItemCombinationListViewState extends State<ItemCombinationListView> {
+class _ItemCombinationListViewState extends State<ItemCombinationListView>
+    with LanguageFetchMixin<ItemCombination, ItemCombinationListView> {
   ItemCombinationType? _type;
+
+  @override
+  Future<List<ItemCombination>> fetchItems(String language) =>
+      ItemCombinationRepository().getItemCombinationList(language);
 
   Future<void> _openFilterSheet() {
     return showModalBottomSheet<void>(
@@ -55,32 +59,11 @@ class _ItemCombinationListViewState extends State<ItemCombinationListView> {
           ),
         ],
       ),
-      body: FutureBuilder<List<ItemCombination>>(
-        future: ItemCombinationRepository().getItemCombinationList(
-          AppSettingsController.instance.locale.languageCode,
-          type: _type,
-        ),
-        builder: (context, snapshot) {
-          final combinations = snapshot.data;
-          if (combinations == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return ListView.separated(
-            padding: context.scrollPadding(
-              const EdgeInsets.fromLTRB(
-                AppPadding.medium,
-                0,
-                AppPadding.medium,
-                AppPadding.small,
-              ),
-            ),
-            itemCount: combinations.length,
-            separatorBuilder: (context, index) => const AppHDivider(),
-            itemBuilder: (context, index) => PillListItem(
-              child: CombinationRow(combination: combinations[index]),
-            ),
-          );
-        },
+      body: FilterableListBody<ItemCombination>(
+        items: items,
+        filter: (c) => _type == null || c.type == _type,
+        itemBuilder: (context, combination) =>
+            PillListItem(child: CombinationRow(combination: combination)),
       ),
     );
   }

@@ -30,14 +30,11 @@ void main() {
     expect(items, isNotEmpty);
   });
 
-  test('getItemList filters by name', () async {
+  test('ItemFilter.matches filters by name', () async {
     final all = await repository.getItemList('en');
     final target = all.first;
 
-    final filtered = await repository.getItemList(
-      'en',
-      filter: ItemFilter(name: target.name),
-    );
+    final filtered = all.where(ItemFilter(name: target.name).matches);
 
     expect(filtered.map((item) => item.id), contains(target.id));
   });

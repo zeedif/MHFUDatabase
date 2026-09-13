@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
-import '../../../../core/settings/app_settings_controller.dart';
-import '../../../../core/theme/app_dimensions.dart';
-import '../../../../core/theme/screen_padding.dart';
-import '../../../../core/widgets/app_h_divider.dart';
+import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/widgets/app_top_bar.dart';
+import '../../../../core/widgets/filterable_list_body.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/pill_list_item.dart';
 import '../../../../core/widgets/search_filter_app_bar.dart';
@@ -24,8 +22,13 @@ class const SkillTreeListView({
   State<SkillTreeListView> createState() => _SkillTreeListViewState();
 }
 
-class _SkillTreeListViewState extends State<SkillTreeListView> {
+class _SkillTreeListViewState extends State<SkillTreeListView>
+    with LanguageFetchMixin<SkillTree, SkillTreeListView> {
   SkillTreeFilter _filter = const SkillTreeFilter();
+
+  @override
+  Future<List<SkillTree>> fetchItems(String language) =>
+      SkillRepository().getSkillTreeList(language);
 
   @override
   Widget build(BuildContext context) {
@@ -41,39 +44,15 @@ class _SkillTreeListViewState extends State<SkillTreeListView> {
         ),
         onGlobalSearch: widget.openSearch,
       ),
-      body: FutureBuilder<List<SkillTree>>(
-        future: SkillRepository().getSkillTreeList(
-          AppSettingsController.instance.locale.languageCode,
-          filter: _filter,
+      body: FilterableListBody<SkillTree>(
+        items: items,
+        filter: _filter.matches,
+        itemBuilder: (context, skillTree) => PillListItem(
+          child: ListItemLayout(
+            headline: Text(skillTree.name),
+            onTap: () => context.push(AppRoutes.skillTreeDetail(skillTree.id)),
+          ),
         ),
-        builder: (context, snapshot) {
-          final skillTrees = snapshot.data;
-          if (skillTrees == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return ListView.separated(
-            padding: context.scrollPadding(
-              const EdgeInsets.fromLTRB(
-                AppPadding.medium,
-                0,
-                AppPadding.medium,
-                AppPadding.small,
-              ),
-            ),
-            itemCount: skillTrees.length,
-            separatorBuilder: (context, index) => const AppHDivider(),
-            itemBuilder: (context, index) {
-              final skillTree = skillTrees[index];
-              return PillListItem(
-                child: ListItemLayout(
-                  headline: Text(skillTree.name),
-                  onTap: () =>
-                      context.push(AppRoutes.skillTreeDetail(skillTree.id)),
-                ),
-              );
-            },
-          );
-        },
       ),
     );
   }

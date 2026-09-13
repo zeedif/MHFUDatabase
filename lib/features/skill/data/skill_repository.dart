@@ -1,13 +1,11 @@
 import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart' show AppDatabase;
-import '../../../core/database/localized_collation.dart';
 import '../../../core/database/sql_args.dart';
 import '../../../core/domain/enums.dart';
 import '../../../core/domain/shared.dart';
 import '../../armor/domain/armor.dart';
 import '../../decoration/domain/decoration.dart';
-import '../domain/skill_tree_filter.dart';
 import '../domain/skill.dart';
 
 class SkillRepository {
@@ -34,13 +32,8 @@ class SkillRepository {
     return _skillTreeFromRow(row, skills: skills);
   }
 
-  Future<List<SkillTree>> getSkillTreeList(
-    String language, {
-    SkillTreeFilter filter = const SkillTreeFilter(),
-  }) async {
+  Future<List<SkillTree>> getSkillTreeList(String language) async {
     final args = SqlArgs();
-    final name = filter.name != null ? normalizeForSearch(filter.name!) : null;
-
     final rows = await _db.customSelect(
       '''
           SELECT skill_tree.*, skill_tree_text.*
@@ -48,22 +41,45 @@ class SkillRepository {
           JOIN skill_tree_text
             ON skill_tree.id = skill_tree_text.skill_tree_id
             AND skill_tree_text.language = ${args.text(language)}
-          WHERE
-            (${args.text(name)} IS NULL OR (skill_tree_text.name_normalized LIKE '%' || ${args.text(name)} || '%' OR skill_tree_text.full_name_normalized LIKE '%' || ${args.text(name)} || '%')
-              OR EXISTS (
-                SELECT 1 FROM skill
-                JOIN skill_text ON skill.id = skill_text.skill_id AND skill_text.language = ${args.text(language)}
-                WHERE skill.skill_tree_id = skill_tree.id
-                  AND (skill_text.name_normalized LIKE '%' || ${args.text(name)} || '%' OR skill_text.full_name_normalized LIKE '%' || ${args.text(name)} || '%')
-              )
-            )
-            AND (${args.text(filter.category?.dbValue)} IS NULL OR skill_tree.category = ${args.text(filter.category?.dbValue)})
           ORDER BY skill_tree_text.name ASC
           ''',
       variables: args.variables,
     ).get();
 
-    return rows.map((row) => _skillTreeFromRow(row)).toList();
+    final skillsBySkillTree = await _groupSkillsBySkillTreeId(language);
+
+    return rows
+        .map(
+          (row) => _skillTreeFromRow(
+            row,
+            skills: skillsBySkillTree[row.data['id'] as int],
+          ),
+        )
+        .toList();
+  }
+
+  Future<Map<int, List<Skill>>> _groupSkillsBySkillTreeId(
+    String language,
+  ) async {
+    final args = SqlArgs();
+    final rows = await _db.customSelect(
+      '''
+          SELECT skill.*, skill_text.*
+          FROM skill
+          JOIN skill_text
+            ON skill.id = skill_text.skill_id
+            AND skill_text.language = ${args.text(language)}
+          ORDER BY skill.required_points DESC
+          ''',
+      variables: args.variables,
+    ).get();
+
+    final grouped = <int, List<Skill>>{};
+    for (final row in rows) {
+      final skillTreeId = row.data['skill_tree_id'] as int;
+      (grouped[skillTreeId] ??= []).add(_skillFromRow(row));
+    }
+    return grouped;
   }
 
   Future<List<Armor>> getArmorListWithSkill(
@@ -197,6 +213,7 @@ class SkillRepository {
     return SkillTree(
       id: row.data['id'] as int,
       name: row.data['name'] as String,
+      fullName: row.data['full_name'] as String?,
       category: SkillCategory.fromDb(row.data['category'] as String),
       skills: skills,
     );
@@ -207,6 +224,7 @@ class SkillRepository {
       id: row.data['id'] as int,
       skillTreeId: row.data['skill_tree_id'] as int,
       name: row.data['name'] as String,
+      fullName: row.data['full_name'] as String?,
       description: row.data['description'] as String,
       requiredPoints: row.data['required_points'] as int,
     );

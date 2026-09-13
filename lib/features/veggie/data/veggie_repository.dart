@@ -1,12 +1,10 @@
 import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart' show AppDatabase;
-import '../../../core/database/localized_collation.dart';
 import '../../../core/database/sql_args.dart';
 import '../../../core/domain/enums.dart';
 import '../../item/domain/item.dart';
 import '../../location/domain/location.dart';
-import '../domain/veggie_filter.dart';
 import '../domain/veggie.dart';
 
 class VeggieRepository {
@@ -40,13 +38,8 @@ class VeggieRepository {
     return _veggieLocationFromRow(row, trades: trades);
   }
 
-  Future<List<VeggieLocation>> getVeggieLocationList(
-    String language, {
-    VeggieFilter filter = const VeggieFilter(),
-  }) async {
+  Future<List<VeggieLocation>> getVeggieLocationList(String language) async {
     final args = SqlArgs();
-    final name = filter.name != null ? normalizeForSearch(filter.name!) : null;
-
     final rows = await _db.customSelect(
       '''
           SELECT
@@ -57,8 +50,6 @@ class VeggieRepository {
           JOIN location_text
             ON veggie.location_id = location_text.location_id
             AND location_text.language = ${args.text(language)}
-          WHERE
-            (${args.text(name)} IS NULL OR location_text.name_normalized LIKE '%' || ${args.text(name)} || '%')
           ORDER BY location_text.name
           ''',
       variables: args.variables,

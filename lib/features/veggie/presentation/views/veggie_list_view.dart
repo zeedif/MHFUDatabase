@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
-import '../../../../core/settings/app_settings_controller.dart';
-import '../../../../core/theme/app_dimensions.dart';
-import '../../../../core/theme/screen_padding.dart';
-import '../../../../core/widgets/app_h_divider.dart';
+import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/widgets/entity_icon.dart';
+import '../../../../core/widgets/filterable_list_body.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/pill_list_item.dart';
 import '../../../../core/widgets/search_filter_app_bar.dart';
@@ -28,8 +26,13 @@ class const VeggieListView({
   State<VeggieListView> createState() => _VeggieListViewState();
 }
 
-class _VeggieListViewState extends State<VeggieListView> {
+class _VeggieListViewState extends State<VeggieListView>
+    with LanguageFetchMixin<VeggieLocation, VeggieListView> {
   VeggieFilter _filter = const VeggieFilter();
+
+  @override
+  Future<List<VeggieLocation>> fetchItems(String language) =>
+      VeggieRepository().getVeggieLocationList(language);
 
   @override
   Widget build(BuildContext context) {
@@ -45,49 +48,26 @@ class _VeggieListViewState extends State<VeggieListView> {
         ),
         onGlobalSearch: widget.openSearch,
       ),
-      body: FutureBuilder<List<VeggieLocation>>(
-        future: VeggieRepository().getVeggieLocationList(
-          AppSettingsController.instance.locale.languageCode,
-          filter: _filter,
-        ),
-        builder: (context, snapshot) {
-          final veggieLocations = snapshot.data;
-          if (veggieLocations == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return ListView.separated(
-            padding: context.scrollPadding(
-              const EdgeInsets.fromLTRB(
-                AppPadding.medium,
-                0,
-                AppPadding.medium,
-                AppPadding.small,
-              ),
+      body: FilterableListBody<VeggieLocation>(
+        items: items,
+        filter: _filter.matches,
+        itemBuilder: (context, veggieLocation) => PillListItem(
+          child: ListItemLayout(
+            leading: EntityIcon(
+              asset: locationIconAsset(veggieLocation.location.id),
             ),
-            itemCount: veggieLocations.length,
-            separatorBuilder: (context, index) => const AppHDivider(),
-            itemBuilder: (context, index) {
-              final veggieLocation = veggieLocations[index];
-              return PillListItem(
-                child: ListItemLayout(
-                  leading: EntityIcon(
-                    asset: locationIconAsset(veggieLocation.location.id),
-                  ),
-                  headline: Text(
-                    veggieLocation.location.name,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  supporting: Text(
-                    _areaLabel(l10n, veggieLocation.locationArea),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  onTap: () =>
-                      context.push(AppRoutes.veggieDetail(veggieLocation.id)),
-                ),
-              );
-            },
-          );
-        },
+            headline: Text(
+              veggieLocation.location.name,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            supporting: Text(
+              _areaLabel(l10n, veggieLocation.locationArea),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            onTap: () =>
+                context.push(AppRoutes.veggieDetail(veggieLocation.id)),
+          ),
+        ),
       ),
     );
   }

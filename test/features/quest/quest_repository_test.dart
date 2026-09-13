@@ -50,27 +50,21 @@ void main() {
     expect(quests, isNotEmpty);
   });
 
-  test('getQuestList filters by name', () async {
+  test('QuestFilter.matches filters by name', () async {
     final all = await repository.getQuestList('en');
     final target = all.first;
 
-    final filtered = await repository.getQuestList(
-      'en',
-      filter: QuestFilter(name: target.name),
-    );
+    final filtered = all.where(QuestFilter(name: target.name).matches);
 
     expect(filtered, isNotEmpty);
     expect(filtered.map((quest) => quest.id), contains(target.id));
   });
 
-  test('getQuestList filters by stars', () async {
+  test('QuestFilter.matches filters by stars', () async {
     final all = await repository.getQuestList('en');
     final stars = all.first.stars;
 
-    final filtered = await repository.getQuestList(
-      'en',
-      filter: QuestFilter(stars: [stars]),
-    );
+    final filtered = all.where(QuestFilter(stars: [stars]).matches);
 
     expect(filtered, isNotEmpty);
     expect(filtered.every((quest) => quest.stars == stars), isTrue);

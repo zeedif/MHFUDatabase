@@ -54,23 +54,21 @@ void main() {
     expect(armors, isNotEmpty);
   });
 
-  test('getArmorList filters by name', () async {
+  test('ArmorFilter.matches filters by name', () async {
     final all = await repository.getArmorList('en');
     final target = all.first;
 
-    final filtered = await repository.getArmorList(
-      'en',
-      filter: ArmorFilter(name: target.name),
-    );
+    final filtered = all.where(ArmorFilter(name: target.name).matches);
 
     expect(filtered, isNotEmpty);
     expect(filtered.map((armor) => armor.id), contains(target.id));
   });
 
-  test('getArmorList filters by equipment type', () async {
-    final filtered = await repository.getArmorList(
-      'en',
-      filter: const ArmorFilter(type: EquipmentType.armorHead),
+  test('ArmorFilter.matches filters by equipment type', () async {
+    final all = await repository.getArmorList('en');
+
+    final filtered = all.where(
+      const ArmorFilter(type: EquipmentType.armorHead).matches,
     );
 
     expect(filtered, isNotEmpty);
@@ -80,23 +78,20 @@ void main() {
     );
   });
 
-  test('getArmorList filters by skill', () async {
+  test('ArmorFilter.matches filters by skill', () async {
+    final all = await repository.getArmorList('en');
     final skillTree = const SkillTree(
       id: 37,
       name: '',
       category: SkillCategory.combat,
     );
 
-    final filtered = await repository.getArmorList(
-      'en',
-      filter: ArmorFilter(skills: [skillTree]),
-    );
+    final filtered = all.where(ArmorFilter(skills: [skillTree]).matches);
 
     expect(filtered, isNotEmpty);
     for (final armor in filtered) {
-      final refetched = await repository.getArmor(armor.id, 'en');
       expect(
-        refetched.skills!.any((point) => point.skillTree.id == 37),
+        armor.skills!.any((point) => point.skillTree.id == 37),
         isTrue,
       );
     }
@@ -107,14 +102,11 @@ void main() {
     expect(sets, isNotEmpty);
   });
 
-  test('getArmorSetList filters by rarity', () async {
+  test('ArmorSetFilter.matches filters by rarity', () async {
     final all = await repository.getArmorSetList('en');
     final rarity = all.first.rarity;
 
-    final filtered = await repository.getArmorSetList(
-      'en',
-      filter: ArmorSetFilter(rarity: [rarity]),
-    );
+    final filtered = all.where(ArmorSetFilter(rarity: [rarity]).matches);
 
     expect(filtered, isNotEmpty);
     expect(filtered.every((set) => set.rarity == rarity), isTrue);

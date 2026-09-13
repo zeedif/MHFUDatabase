@@ -1,13 +1,11 @@
 import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart' show AppDatabase;
-import '../../../core/database/localized_collation.dart';
 import '../../../core/database/sql_args.dart';
 import '../../../core/domain/enums.dart';
 import '../../../core/domain/shared.dart';
 import '../../item/domain/item.dart';
 import '../../skill/domain/skill.dart';
-import '../domain/decoration_filter.dart';
 import '../domain/decoration.dart';
 
 class DecorationRepository {
@@ -31,9 +29,11 @@ class DecorationRepository {
       variables: args.variables,
     ).getSingle();
 
-    final skills = await _getDecorationSkills(decorationId, language);
-    final recipeA = await _getDecorationRecipe(decorationId, 1, language);
-    final recipeB = await _getDecorationRecipe(decorationId, 2, language);
+    final (skills, recipeA, recipeB) = await (
+      _getDecorationSkills(decorationId, language),
+      _getDecorationRecipe(decorationId, 1, language),
+      _getDecorationRecipe(decorationId, 2, language),
+    ).wait;
 
     return _decorationFromRow(
       row,
@@ -43,15 +43,8 @@ class DecorationRepository {
     );
   }
 
-  Future<List<Decoration>> getDecorationList(
-    String language, {
-    DecorationFilter filter = const DecorationFilter(),
-  }) async {
+  Future<List<Decoration>> getDecorationList(String language) async {
     final args = SqlArgs();
-    final numberOfSlots = filter.numberOfSlots ?? const [];
-    final skills = filter.skills ?? const [];
-    final name = filter.name != null ? normalizeForSearch(filter.name!) : null;
-
     final rows = await _db.customSelect(
       '''
           SELECT decoration.required_slots AS dec_required_slots, decoration.shop_order AS dec_shop_order,
@@ -61,16 +54,6 @@ class DecorationRepository {
           JOIN item_text
             ON item.id = item_text.item_id
             AND item_text.language = ${args.text(language)}
-          WHERE
-            (${args.text(name)} IS NULL OR (item_text.name_normalized LIKE '%' || ${args.text(name)} || '%' OR item_text.full_name_normalized LIKE '%' || ${args.text(name)} || '%'))
-            AND (${args.integer(filter.maxAvailableSlots)} IS NULL OR decoration.required_slots <= ${args.integer(filter.maxAvailableSlots)})
-            AND (${args.flag(numberOfSlots.isEmpty)} OR decoration.required_slots IN ${args.integers(numberOfSlots)}
-            )
-            AND (${args.flag(skills.isEmpty)} OR EXISTS (
-              SELECT 1 FROM decoration_skill
-              WHERE decoration_skill.decoration_id = decoration.id
-              AND decoration_skill.skill_tree_id IN ${args.integers(skills.map((skill) => skill.id).toList())}
-            ))
           ORDER BY dec_shop_order ASC
           ''',
       variables: args.variables,
@@ -169,6 +152,7 @@ class DecorationRepository {
     return Decoration(
       id: row.data['id'] as int,
       name: row.data['name'] as String,
+      fullName: row.data['full_name'] as String?,
       description: row.data['description'] as String,
       rarity: row.data['rarity'] as int,
       buyPrice: row.data['buy_price'] as int? ?? 0,

@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/domain/enums.dart';
 import '../../../../core/router/app_routes.dart';
-import '../../../../core/settings/app_settings_controller.dart';
+import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/theme/screen_padding.dart';
 import '../../../../core/widgets/app_h_divider.dart';
@@ -74,9 +74,14 @@ class const QuestListView({
   State<QuestListView> createState() => _QuestListViewState();
 }
 
-class _QuestListViewState extends State<QuestListView> {
+class _QuestListViewState extends State<QuestListView>
+    with LanguageFetchMixin<Quest, QuestListView> {
   QuestFilter _filter = const QuestFilter(hub: HubType.village);
   Set<QuestGroup> _expanded = {};
+
+  @override
+  Future<List<Quest>> fetchItems(String language) =>
+      QuestRepository().getQuestList(language);
 
   void _setFilter(QuestFilter filter) {
     setState(() {
@@ -105,6 +110,7 @@ class _QuestListViewState extends State<QuestListView> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final quests = items;
 
     return Scaffold(
       appBar: SearchFilterAppBar(
@@ -121,68 +127,68 @@ class _QuestListViewState extends State<QuestListView> {
         onGlobalSearch: widget.openSearch,
         onFilterTap: _openFilterSheet,
       ),
-      body: FutureBuilder<List<Quest>>(
-        future: QuestRepository().getQuestList(
-          AppSettingsController.instance.locale.languageCode,
-          filter: _filter,
+      body: quests == null
+          ? const Center(child: CircularProgressIndicator())
+          : Builder(
+              builder: (context) {
+                final grouped = <QuestGroup, List<Quest>>{};
+                for (final quest in quests.where(_filter.matches)) {
+                  (grouped[quest.group] ??= []).add(quest);
+                }
+
+                return _buildQuestList(context, grouped);
+              },
+            ),
+    );
+  }
+
+  Widget _buildQuestList(
+    BuildContext context,
+    Map<QuestGroup, List<Quest>> grouped,
+  ) {
+    return ListView(
+      padding: context.scrollPadding(
+        const EdgeInsets.fromLTRB(
+          AppPadding.medium,
+          0,
+          AppPadding.medium,
+          AppPadding.small,
         ),
-        builder: (context, snapshot) {
-          final quests = snapshot.data;
-          if (quests == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final grouped = <QuestGroup, List<Quest>>{};
-          for (final quest in quests) {
-            (grouped[quest.group] ??= []).add(quest);
-          }
-
-          return ListView(
-            padding: context.scrollPadding(
-              const EdgeInsets.fromLTRB(
-                AppPadding.medium,
-                0,
-                AppPadding.medium,
-                AppPadding.small,
+      ),
+      children: [
+        for (final entry in grouped.entries) ...[
+          _QuestGroupHeader(
+            group: entry.key,
+            stars: _starExcludedGroups.contains(entry.key)
+                ? 0
+                : entry.value.first.stars,
+            expanded: _expanded.contains(entry.key),
+            onTap: () => _toggleExpand(entry.key),
+          ),
+          if (_expanded.contains(entry.key)) ...[
+            Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(AppRadius.medium),
+                  bottomRight: Radius.circular(AppRadius.medium),
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  for (var i = 0; i < entry.value.length; i++) ...[
+                    _QuestRow(quest: entry.value[i]),
+                    if (i != entry.value.length - 1) const AppHDivider(),
+                  ],
+                ],
               ),
             ),
-            children: [
-              for (final entry in grouped.entries) ...[
-                _QuestGroupHeader(
-                  group: entry.key,
-                  stars: _starExcludedGroups.contains(entry.key)
-                      ? 0
-                      : entry.value.first.stars,
-                  expanded: _expanded.contains(entry.key),
-                  onTap: () => _toggleExpand(entry.key),
-                ),
-                if (_expanded.contains(entry.key)) ...[
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(AppRadius.medium),
-                        bottomRight: Radius.circular(AppRadius.medium),
-                      ),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Column(
-                      children: [
-                        for (var i = 0; i < entry.value.length; i++) ...[
-                          _QuestRow(quest: entry.value[i]),
-                          if (i != entry.value.length - 1) const AppHDivider(),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.small),
-                ] else
-                  const SizedBox(height: AppSpacing.small),
-              ],
-            ],
-          );
-        },
-      ),
+            const SizedBox(height: AppSpacing.small),
+          ] else
+            const SizedBox(height: AppSpacing.small),
+        ],
+      ],
     );
   }
 }

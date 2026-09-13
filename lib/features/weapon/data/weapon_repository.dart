@@ -1,12 +1,10 @@
 import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart' show AppDatabase;
-import '../../../core/database/localized_collation.dart';
 import '../../../core/database/sql_args.dart';
 import '../../../core/domain/enums.dart';
 import '../../../core/domain/shared.dart';
 import '../../item/domain/item.dart';
-import '../domain/weapon_filter.dart';
 import '../domain/weapon.dart';
 
 class WeaponRepository {
@@ -54,27 +52,8 @@ class WeaponRepository {
     );
   }
 
-  Future<List<Weapon>> getWeaponList(
-    String language, {
-    WeaponFilter filter = const WeaponFilter(),
-  }) async {
+  Future<List<Weapon>> getWeaponList(String language) async {
     final args = SqlArgs();
-    final numberOfSlots = filter.numberOfSlots ?? const [];
-    final rarity = filter.rarity ?? const [];
-    final weaponTypes =
-        filter.weaponType != null && filter.weaponType!.isNotEmpty
-        ? filter.weaponType!.map((type) => type.dbValue).toList()
-        : (filter.hunterType != null
-              ? WeaponType.forHunterType(
-                  filter.hunterType!,
-                ).map((type) => type.dbValue).toList()
-              : const <String>[]);
-    final hasWeaponTypeFilter =
-        (filter.weaponType != null && filter.weaponType!.isNotEmpty) ||
-        filter.hunterType != null;
-    final elementTypes = filter.elementType ?? const [];
-    final name = filter.name != null ? normalizeForSearch(filter.name!) : null;
-
     final rows = await _db.customSelect(
       '''
           SELECT weapon.*, weapon_text.*
@@ -82,18 +61,6 @@ class WeaponRepository {
           JOIN weapon_text
             ON weapon.id = weapon_text.weapon_id
             AND weapon_text.language = ${args.text(language)}
-          WHERE
-            (${args.text(name)} IS NULL OR (weapon_text.name_normalized LIKE '%' || ${args.text(name)} || '%' OR weapon_text.full_name_normalized LIKE '%' || ${args.text(name)} || '%'))
-            AND (${args.flag(!hasWeaponTypeFilter)} OR weapon.weapon_type IN ${args.texts(weaponTypes)}
-            )
-            AND (${args.flag(numberOfSlots.isEmpty)} OR weapon.num_slots IN ${args.integers(numberOfSlots)}
-            )
-            AND (${args.flag(rarity.isEmpty)} OR weapon.rarity IN ${args.integers(rarity)}
-            )
-            AND (${args.flag(elementTypes.isEmpty)} OR (
-              weapon.element_1 IN ${args.texts(elementTypes.map((element) => element.dbValue).toList())}
-              OR weapon.element_2 IN ${args.texts(elementTypes.map((element) => element.dbValue).toList())}
-            ))
           ''',
       variables: args.variables,
     ).get();
@@ -248,6 +215,7 @@ class WeaponRepository {
     return Weapon(
       id: row.data['id'] as int,
       name: row.data['name'] as String,
+      fullName: row.data['full_name'] as String?,
       description: row.data['description'] as String,
       type: WeaponType.fromDb(row.data['weapon_type'] as String),
       rarity: row.data['rarity'] as int,

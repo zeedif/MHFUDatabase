@@ -1,4 +1,3 @@
-import '../../../core/domain/enums.dart';
 import '../../item/data/item_repository.dart';
 import '../domain/item_combination.dart';
 
@@ -8,10 +7,7 @@ class ItemCombinationRepository {
 
   final ItemRepository _itemRepository;
 
-  Future<List<ItemCombination>> getItemCombinationList(
-    String language, {
-    ItemCombinationType? type,
-  }) {
-    return _itemRepository.getItemCombinationList(language, type: type);
+  Future<List<ItemCombination>> getItemCombinationList(String language) {
+    return _itemRepository.getItemCombinationList(language);
   }
 }

@@ -1,12 +1,10 @@
 import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart' show AppDatabase;
-import '../../../core/database/localized_collation.dart';
 import '../../../core/database/sql_args.dart';
 import '../../../core/domain/enums.dart';
 import '../../item/domain/item.dart';
 import '../../quest/domain/quest.dart';
-import '../domain/monster_filter.dart';
 import '../domain/monster.dart';
 
 class MonsterRepository {
@@ -60,13 +58,8 @@ class MonsterRepository {
     );
   }
 
-  Future<List<Monster>> getMonsterList(
-    String language, {
-    MonsterFilter filter = const MonsterFilter(),
-  }) async {
+  Future<List<Monster>> getMonsterList(String language) async {
     final args = SqlArgs();
-    final name = filter.name != null ? normalizeForSearch(filter.name!) : null;
-
     final rows = await _db.customSelect(
       '''
           SELECT monster.*, monster_text.*
@@ -74,10 +67,6 @@ class MonsterRepository {
           JOIN monster_text
             ON monster.id = monster_text.monster_id
             AND monster_text.language = ${args.text(language)}
-          WHERE
-            (${args.text(name)} IS NULL OR monster_text.name_normalized LIKE '%' || ${args.text(name)} || '%')
-            AND (${args.text(filter.ecology)} IS NULL OR monster_text.ecology = ${args.text(filter.ecology)})
-            AND (${args.text(filter.type?.dbValue)} IS NULL OR monster.monster_type = ${args.text(filter.type?.dbValue)})
           ORDER BY monster_text.name ASC
           ''',
       variables: args.variables,
@@ -267,6 +256,7 @@ class MonsterRepository {
     return Quest(
       id: row.data['id'] as int,
       name: row.data['name'] as String,
+      locationId: row.data['location_id'] as int,
       goal: row.data['goal'] as String,
       client: row.data['client'] as String,
       description: row.data['description'] as String,

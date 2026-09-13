@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart' hide Decoration;
 
-import '../../../../core/settings/app_settings_controller.dart';
+import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/theme/app_dimensions.dart';
-import '../../../../core/theme/screen_padding.dart';
-import '../../../../core/widgets/app_h_divider.dart';
 import '../../../../core/widgets/entity_icon.dart';
 import '../../../../core/widgets/filter_sheet_body.dart';
+import '../../../../core/widgets/filterable_list_body.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/mhfu_colors.dart';
 import '../../../../core/widgets/pill_list_item.dart';
@@ -27,10 +26,15 @@ class const DecorationSelectionView({
       _DecorationSelectionViewState();
 }
 
-class _DecorationSelectionViewState extends State<DecorationSelectionView> {
+class _DecorationSelectionViewState extends State<DecorationSelectionView>
+    with LanguageFetchMixin<Decoration, DecorationSelectionView> {
   late DecorationFilter _filter = DecorationFilter(
     maxAvailableSlots: widget.maxAvailableSlots,
   );
+
+  @override
+  Future<List<Decoration>> fetchItems(String language) =>
+      DecorationRepository().getDecorationList(language);
 
   Future<void> _openFilterSheet() async {
     final updated = await showModalBottomSheet<DecorationFilter>(
@@ -56,44 +60,21 @@ class _DecorationSelectionViewState extends State<DecorationSelectionView> {
         ),
         onFilterTap: _openFilterSheet,
       ),
-      body: FutureBuilder<List<Decoration>>(
-        future: DecorationRepository().getDecorationList(
-          AppSettingsController.instance.locale.languageCode,
-          filter: _filter,
-        ),
-        builder: (context, snapshot) {
-          final decorations = snapshot.data;
-          if (decorations == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return ListView.separated(
-            padding: context.scrollPadding(
-              const EdgeInsets.fromLTRB(
-                AppPadding.medium,
-                0,
-                AppPadding.medium,
-                AppPadding.small,
-              ),
+      body: FilterableListBody<Decoration>(
+        items: items,
+        filter: _filter.matches,
+        itemBuilder: (context, decoration) => PillListItem(
+          child: ListItemLayout(
+            leading: EntityIcon(
+              asset: 'ic_ui_decoration',
+              size: AppSize.medium,
+              tint: itemIconColorValue(decoration.color),
             ),
-            itemCount: decorations.length,
-            separatorBuilder: (context, index) => const AppHDivider(),
-            itemBuilder: (context, index) {
-              final decoration = decorations[index];
-              return PillListItem(
-                child: ListItemLayout(
-                  leading: EntityIcon(
-                    asset: 'ic_ui_decoration',
-                    size: AppSize.medium,
-                    tint: itemIconColorValue(decoration.color),
-                  ),
-                  headline: Text(decoration.name),
-                  supporting: Text('${decoration.requiredSlots}'),
-                  onTap: () => Navigator.of(context).pop(decoration),
-                ),
-              );
-            },
-          );
-        },
+            headline: Text(decoration.name),
+            supporting: Text('${decoration.requiredSlots}'),
+            onTap: () => Navigator.of(context).pop(decoration),
+          ),
+        ),
       ),
     );
   }

@@ -3,13 +3,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/domain/enums.dart';
 import '../../../../core/router/app_routes.dart';
-import '../../../../core/settings/app_settings_controller.dart';
+import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/theme/app_dimensions.dart';
-import '../../../../core/theme/screen_padding.dart';
-import '../../../../core/widgets/app_h_divider.dart';
 import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/widgets/entity_icon.dart';
 import '../../../../core/widgets/filter_sheet_body.dart';
+import '../../../../core/widgets/filterable_list_body.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/pill_list_item.dart';
 import '../../../../core/widgets/search_filter_app_bar.dart';
@@ -28,8 +27,13 @@ class const MonsterListView({
   State<MonsterListView> createState() => _MonsterListViewState();
 }
 
-class _MonsterListViewState extends State<MonsterListView> {
+class _MonsterListViewState extends State<MonsterListView>
+    with LanguageFetchMixin<Monster, MonsterListView> {
   MonsterFilter _filter = const MonsterFilter();
+
+  @override
+  Future<List<Monster>> fetchItems(String language) =>
+      MonsterRepository().getMonsterList(language);
 
   void _setFilter(MonsterFilter filter) => setState(() => _filter = filter);
 
@@ -57,41 +61,17 @@ class _MonsterListViewState extends State<MonsterListView> {
         onGlobalSearch: widget.openSearch,
         onFilterTap: _openFilterSheet,
       ),
-      body: FutureBuilder<List<Monster>>(
-        future: MonsterRepository().getMonsterList(
-          AppSettingsController.instance.locale.languageCode,
-          filter: _filter,
+      body: FilterableListBody<Monster>(
+        items: items,
+        filter: _filter.matches,
+        itemBuilder: (context, monster) => PillListItem(
+          child: ListItemLayout(
+            leading: EntityIcon(asset: monsterIconAsset(monster.id)),
+            headline: Text(monster.name),
+            supporting: Text(monster.ecology),
+            onTap: () => context.push(AppRoutes.monsterDetail(monster.id)),
+          ),
         ),
-        builder: (context, snapshot) {
-          final monsters = snapshot.data;
-          if (monsters == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return ListView.separated(
-            padding: context.scrollPadding(
-              const EdgeInsets.fromLTRB(
-                AppPadding.medium,
-                0,
-                AppPadding.medium,
-                AppPadding.small,
-              ),
-            ),
-            itemCount: monsters.length,
-            separatorBuilder: (context, index) => const AppHDivider(),
-            itemBuilder: (context, index) {
-              final monster = monsters[index];
-              return PillListItem(
-                child: ListItemLayout(
-                  leading: EntityIcon(asset: monsterIconAsset(monster.id)),
-                  headline: Text(monster.name),
-                  supporting: Text(monster.ecology),
-                  onTap: () =>
-                      context.push(AppRoutes.monsterDetail(monster.id)),
-                ),
-              );
-            },
-          );
-        },
       ),
     );
   }

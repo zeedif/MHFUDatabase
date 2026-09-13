@@ -12,6 +12,7 @@ import '../../weapon/domain/weapon.dart';
 class const Item({
   required final int id,
   required final String name,
+  final String? fullName,
   required final String description,
   required final int rarity,
   final int? buyPrice,

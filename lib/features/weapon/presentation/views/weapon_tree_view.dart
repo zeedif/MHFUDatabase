@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/database/localized_collation.dart';
 import '../../../../core/domain/enums.dart';
 import '../../../../core/router/app_routes.dart';
-import '../../../../core/settings/app_settings_controller.dart';
+import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/theme/screen_padding.dart';
 import '../../../../core/widgets/app_h_divider.dart';
@@ -26,14 +26,23 @@ class const WeaponTreeView({
   State<WeaponTreeView> createState() => _WeaponTreeViewState();
 }
 
-class _WeaponTreeViewState extends State<WeaponTreeView> {
+class _WeaponTreeViewState extends State<WeaponTreeView>
+    with LanguageFetchMixin<FlattenedWeaponNode, WeaponTreeView> {
   String _query = '';
+
+  @override
+  Future<List<FlattenedWeaponNode>> fetchItems(String language) =>
+      WeaponRepository().getWeaponTree(
+        WeaponType.fromDb(widget.weaponType),
+        language,
+      );
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final type = WeaponType.fromDb(widget.weaponType);
     final title = weaponTypeLabel(l10n, type);
+    final nodes = items;
 
     return Scaffold(
       appBar: SearchFilterAppBar(
@@ -43,49 +52,45 @@ class _WeaponTreeViewState extends State<WeaponTreeView> {
         onQueryChanged: (query) => setState(() => _query = query),
         onGlobalSearch: widget.openSearch,
       ),
-      body: FutureBuilder<List<FlattenedWeaponNode>>(
-        future: WeaponRepository().getWeaponTree(
-          type,
-          AppSettingsController.instance.locale.languageCode,
-        ),
-        builder: (context, snapshot) {
-          final nodes = snapshot.data;
-          if (nodes == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: nodes == null
+          ? const Center(child: CircularProgressIndicator())
+          : Builder(
+              builder: (context) {
+                final query = normalizeForSearch(_query);
+                final filtered = query.isEmpty
+                    ? nodes
+                    : nodes
+                          .where(
+                            (node) => normalizeForSearch(
+                              node.weapon.name,
+                            ).contains(query),
+                          )
+                          .toList();
 
-          final query = normalizeForSearch(_query);
-          final filtered = query.isEmpty
-              ? nodes
-              : nodes
-                    .where(
-                      (node) =>
-                          normalizeForSearch(node.weapon.name).contains(query),
-                    )
-                    .toList();
-
-          return ListView.separated(
-            padding: context.scrollPadding(
-              const EdgeInsets.fromLTRB(
-                AppPadding.medium,
-                0,
-                AppPadding.medium,
-                AppPadding.small,
-              ),
+                return ListView.separated(
+                  padding: context.scrollPadding(
+                    const EdgeInsets.fromLTRB(
+                      AppPadding.medium,
+                      0,
+                      AppPadding.medium,
+                      AppPadding.small,
+                    ),
+                  ),
+                  itemCount: filtered.length,
+                  separatorBuilder: (context, index) => const AppHDivider(),
+                  itemBuilder: (context, index) {
+                    final node = filtered[index];
+                    final depth = query.isEmpty ? node.depth : 0;
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        left: AppPadding.small * depth,
+                      ),
+                      child: _WeaponTreeTile(weapon: node.weapon),
+                    );
+                  },
+                );
+              },
             ),
-            itemCount: filtered.length,
-            separatorBuilder: (context, index) => const AppHDivider(),
-            itemBuilder: (context, index) {
-              final node = filtered[index];
-              final depth = query.isEmpty ? node.depth : 0;
-              return Padding(
-                padding: EdgeInsets.only(left: AppPadding.small * depth),
-                child: _WeaponTreeTile(weapon: node.weapon),
-              );
-            },
-          );
-        },
-      ),
     );
   }
 }

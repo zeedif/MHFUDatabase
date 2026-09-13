@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/database/localized_collation.dart';
 import '../../../../core/domain/enums.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_dimensions.dart';
@@ -10,6 +11,7 @@ import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/widgets/entity_icon.dart';
 import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/pill_list_item.dart';
+import '../../../../core/widgets/search_filter_app_bar.dart';
 import '../../../../l10n/app_localizations.dart';
 
 String weaponTypeLabel(AppLocalizations l10n, WeaponType type) =>
@@ -31,17 +33,35 @@ class const WeaponTypeListView({
   required final VoidCallback openDrawer,
   required final VoidCallback openSearch,
   super.key,
-}) extends StatelessWidget {
+}) extends StatefulWidget {
+  @override
+  State<WeaponTypeListView> createState() => _WeaponTypeListViewState();
+}
+
+class _WeaponTypeListViewState extends State<WeaponTypeListView> {
+  String _query = '';
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final query = normalizeForSearch(_query);
+    final types = query.isEmpty
+        ? WeaponType.values
+        : WeaponType.values
+              .where(
+                (type) =>
+                    normalizeForSearch(weaponTypeLabel(l10n, type))
+                        .contains(query),
+              )
+              .toList();
 
     return Scaffold(
-      appBar: AppTopBar(
+      appBar: SearchFilterAppBar(
         title: l10n.screenWeaponTypeList,
         navigation: AppTopBarNavigation.menu,
-        onNavigationTap: openDrawer,
-        onSearchTap: openSearch,
+        onNavigationTap: widget.openDrawer,
+        onQueryChanged: (query) => setState(() => _query = query),
+        onGlobalSearch: widget.openSearch,
       ),
       body: ListView.separated(
         padding: context.scrollPadding(
@@ -52,10 +72,10 @@ class const WeaponTypeListView({
             AppPadding.small,
           ),
         ),
-        itemCount: WeaponType.values.length,
+        itemCount: types.length,
         separatorBuilder: (context, index) => const AppHDivider(),
         itemBuilder: (context, index) {
-          final type = WeaponType.values[index];
+          final type = types[index];
           return PillListItem(
             child: ListItemLayout(
               leading: WeaponEntityIcon(

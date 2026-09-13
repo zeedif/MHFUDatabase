@@ -1,13 +1,11 @@
 import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart' show AppDatabase;
-import '../../../core/database/localized_collation.dart';
 import '../../../core/database/sql_args.dart';
 import '../../../core/domain/enums.dart';
 import '../../../core/domain/shared.dart';
 import '../../item/domain/item.dart';
 import '../../skill/domain/skill.dart';
-import '../domain/armor_filter.dart';
 import '../domain/armor.dart';
 
 class ArmorRepository {
@@ -78,16 +76,8 @@ class ArmorRepository {
     );
   }
 
-  Future<List<Armor>> getArmorList(
-    String language, {
-    ArmorFilter filter = const ArmorFilter(),
-  }) async {
+  Future<List<Armor>> getArmorList(String language) async {
     final args = SqlArgs();
-    final numberOfSlots = filter.numberOfSlots ?? const [];
-    final rarity = filter.rarity ?? const [];
-    final skills = filter.skills ?? const [];
-    final name = filter.name != null ? normalizeForSearch(filter.name!) : null;
-
     final rows = await _db.customSelect(
       '''
           SELECT armor.*, armor_text.*
@@ -95,20 +85,6 @@ class ArmorRepository {
           JOIN armor_text
             ON armor.id = armor_text.armor_id
             AND armor_text.language = ${args.text(language)}
-          WHERE
-            (${args.text(name)} IS NULL OR (armor_text.name_normalized LIKE '%' || ${args.text(name)} || '%' OR armor_text.full_name_normalized LIKE '%' || ${args.text(name)} || '%'))
-            AND (${args.text(filter.type?.dbValue)} IS NULL OR armor.armor_type = ${args.text(filter.type?.dbValue)})
-            AND (${args.flag(numberOfSlots.isEmpty)} OR armor.num_slots IN ${args.integers(numberOfSlots)}
-            )
-            AND (${args.flag(rarity.isEmpty)} OR armor.rarity IN ${args.integers(rarity)}
-            )
-            AND (${args.text(filter.gender?.dbValue)} IS NULL OR armor.gender IN (${args.text(filter.gender?.dbValue)}, 'BOTH'))
-            AND (${args.text(filter.hunterType?.dbValue)} IS NULL OR armor.hunter_type IN (${args.text(filter.hunterType?.dbValue)}, 'BOTH'))
-            AND (${args.flag(skills.isEmpty)} OR EXISTS (
-              SELECT 1 FROM armor_skill
-              WHERE armor_skill.armor_id = armor.id
-              AND armor_skill.skill_tree_id IN ${args.integers(skills.map((skill) => skill.id).toList())}
-            ))
           ORDER BY armor.armor_set_id ASC
           ''',
       variables: args.variables,
@@ -126,18 +102,8 @@ class ArmorRepository {
         .toList();
   }
 
-  Future<List<ArmorSet>> getArmorSetList(
-    String language, {
-    ArmorSetFilter filter = const ArmorSetFilter(),
-  }) async {
+  Future<List<ArmorSet>> getArmorSetList(String language) async {
     final args = SqlArgs();
-    final rarity = filter.rarity ?? const [];
-    final skills = filter.skills ?? const [];
-    final hunterType = filter.hunterType != null
-        ? [filter.hunterType!.dbValue, HunterType.both.dbValue]
-        : const <String>[];
-    final name = filter.name != null ? normalizeForSearch(filter.name!) : null;
-
     final rows = await _db.customSelect(
       '''
           SELECT
@@ -154,26 +120,16 @@ class ArmorRepository {
             ON armor_set.id = armor_set_text.armor_set_id
             AND armor_set_text.language = ${args.text(language)}
           JOIN armor ON armor_set.id = armor.armor_set_id
-          WHERE
-            (${args.text(name)} IS NULL OR armor_set_text.name_normalized LIKE '%' || ${args.text(name)} || '%')
-            AND (${args.flag(rarity.isEmpty)} OR armor_set.rarity IN ${args.integers(rarity)}
-            )
-            AND (${args.text(filter.rank?.dbValue)} IS NULL OR armor_set.rank = ${args.text(filter.rank?.dbValue)})
-            AND (${args.flag(filter.hunterType == null)} OR armor_set.hunter_type IN ${args.texts(hunterType)}
-            )
-            AND (${args.text(filter.gender?.dbValue)} IS NULL OR armor_set.gender = ${args.text(filter.gender?.dbValue)})
-            AND (${args.flag(skills.isEmpty)} OR EXISTS (
-              SELECT 1 FROM armor_skill
-              JOIN armor ON armor.id = armor_skill.armor_id
-              WHERE armor.armor_set_id = armor_set.id
-              AND armor_skill.skill_tree_id IN ${args.integers(skills.map((skill) => skill.id).toList())}
-            ))
           GROUP BY armor_set.id
           ''',
       variables: args.variables,
     ).get();
 
-    final armorsByArmorSet = await _groupArmorListByArmorSetId(language);
+    final skillPointsByArmor = await _groupArmorSkillsByArmorId(language);
+    final armorsByArmorSet = await _groupArmorListByArmorSetId(
+      language,
+      skillPointsByArmor: skillPointsByArmor,
+    );
 
     return rows
         .map(
@@ -204,8 +160,9 @@ class ArmorRepository {
   }
 
   Future<Map<int, List<Armor>>> _groupArmorListByArmorSetId(
-    String language,
-  ) async {
+    String language, {
+    Map<int, List<SkillPoint>>? skillPointsByArmor,
+  }) async {
     final args = SqlArgs();
     final rows = await _db.customSelect(
       '''
@@ -221,7 +178,12 @@ class ArmorRepository {
     final grouped = <int, List<Armor>>{};
     for (final row in rows) {
       final armorSetId = row.data['armor_set_id'] as int;
-      (grouped[armorSetId] ??= []).add(_armorFromRow(row));
+      (grouped[armorSetId] ??= []).add(
+        _armorFromRow(
+          row,
+          skills: skillPointsByArmor?[row.data['id'] as int],
+        ),
+      );
     }
     return grouped;
   }
@@ -357,6 +319,7 @@ class ArmorRepository {
       id: row.data['id'] as int,
       armorSetId: row.data['armor_set_id'] as int,
       name: row.data['name'] as String,
+      fullName: row.data['full_name'] as String?,
       description: row.data['description'] as String,
       type: EquipmentType.fromDb(row.data['armor_type'] as String),
       hunterType: HunterType.fromDb(row.data['hunter_type'] as String),

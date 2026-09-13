@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart' show AppDatabase;
-import '../../../core/database/localized_collation.dart';
 import '../../../core/database/sql_args.dart';
 import '../../../core/domain/enums.dart';
 import '../../../core/domain/shared.dart';
@@ -13,7 +12,6 @@ import '../../monster/domain/monster.dart';
 import '../../quest/domain/quest.dart';
 import '../../veggie/domain/veggie.dart';
 import '../../weapon/domain/weapon.dart';
-import '../domain/item_filter.dart';
 import '../domain/item.dart';
 
 class ItemRepository {
@@ -45,20 +43,8 @@ class ItemRepository {
     return _itemFromRow(row, sources: sources, usages: usages);
   }
 
-  Future<List<Item>> getItemList(
-    String language, {
-    ItemFilter filter = const ItemFilter(),
-  }) async {
+  Future<List<Item>> getItemList(String language) async {
     final args = SqlArgs();
-    final rarity = filter.rarity ?? const [];
-    final icons = (filter.icons ?? const [])
-        .map((icon) => icon.dbValue)
-        .toList();
-    final iconColors = (filter.iconColors ?? const [])
-        .map((color) => color.dbValue)
-        .toList();
-    final name = filter.name != null ? normalizeForSearch(filter.name!) : null;
-
     final rows = await _db.customSelect(
       '''
           SELECT item.*, item_text.*
@@ -66,15 +52,7 @@ class ItemRepository {
           JOIN item_text
             ON item.id = item_text.item_id
             AND item_text.language = ${args.text(language)}
-          WHERE
-            item.id != 0
-            AND (${args.text(name)} IS NULL OR (item_text.name_normalized LIKE '%' || ${args.text(name)} || '%' OR item_text.full_name_normalized LIKE '%' || ${args.text(name)} || '%'))
-            AND (${args.flag(rarity.isEmpty)} OR item.rarity IN ${args.integers(rarity)}
-            )
-            AND (${args.flag(icons.isEmpty)} OR item.icon_type IN ${args.texts(icons)}
-            )
-            AND (${args.flag(iconColors.isEmpty)} OR item.icon_color IN ${args.texts(iconColors)}
-            )
+          WHERE item.id != 0
           ''',
       variables: args.variables,
     ).get();
@@ -102,18 +80,8 @@ class ItemRepository {
     return rows.map((row) => _itemFromRow(row)).toList();
   }
 
-  Future<List<ItemCombination>> getItemCombinationList(
-    String language, {
-    ItemCombinationType? type,
-  }) async {
-    final args = SqlArgs();
-    final rows = await _db.customSelect(
-      '''
-          SELECT * FROM item_combination
-          WHERE (${args.text(type?.dbValue)} IS NULL OR combination_type = ${args.text(type?.dbValue)})
-          ''',
-      variables: args.variables,
-    ).get();
+  Future<List<ItemCombination>> getItemCombinationList(String language) async {
+    final rows = await _db.customSelect('SELECT * FROM item_combination').get();
     return _mapCombinationRows(rows, language);
   }
 
@@ -487,6 +455,7 @@ class ItemRepository {
     return Quest(
       id: row.data['id'] as int,
       name: row.data['name'] as String,
+      locationId: row.data['location_id'] as int,
       goal: row.data['goal'] as String,
       client: row.data['client'] as String,
       description: row.data['description'] as String,
@@ -580,6 +549,7 @@ class ItemRepository {
     return Item(
       id: row.data['id'] as int,
       name: row.data['name'] as String,
+      fullName: row.data['full_name'] as String?,
       description: row.data['description'] as String,
       rarity: row.data['rarity'] as int,
       buyPrice: row.data['buy_price'] as int?,
