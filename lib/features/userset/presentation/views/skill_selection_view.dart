@@ -27,15 +27,19 @@ class _SkillSelectionViewState extends State<SkillSelectionView>
   Future<List<SkillTree>> fetchItems(String language) =>
       SkillRepository().getSkillTreeList(language);
 
-  Future<void> _openFilterSheet() async {
-    final category = await showModalBottomSheet<SkillCategory?>(
+  Future<void> _openFilterSheet() {
+    return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => _SkillCategorySheet(selected: _filter.category),
-    );
-    if (!mounted) return;
-    setState(
-      () => _filter = SkillTreeFilter(name: _filter.name, category: category),
+      builder: (context) => _SkillCategorySheet(
+        selected: _filter.category,
+        onCategoryChange: (category) => setState(
+          () => _filter = SkillTreeFilter(
+            name: _filter.name,
+            category: category,
+          ),
+        ),
+      ),
     );
   }
 
@@ -65,8 +69,17 @@ class _SkillSelectionViewState extends State<SkillSelectionView>
   }
 }
 
-class const _SkillCategorySheet({required final SkillCategory? selected})
-    extends StatelessWidget {
+class const _SkillCategorySheet({
+  required final SkillCategory? selected,
+  required final ValueChanged<SkillCategory?> onCategoryChange,
+}) extends StatefulWidget {
+  @override
+  State<_SkillCategorySheet> createState() => _SkillCategorySheetState();
+}
+
+class _SkillCategorySheetState extends State<_SkillCategorySheet> {
+  late SkillCategory? _selected = widget.selected;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -95,10 +108,12 @@ class const _SkillCategorySheet({required final SkillCategory? selected})
           children: [
             for (final category in SkillCategory.values)
               SelectionPill(
-                selected: category == selected,
-                onTap: () => Navigator.of(
-                  context,
-                ).pop(category == selected ? null : category),
+                selected: category == _selected,
+                onTap: () {
+                  final updated = category == _selected ? null : category;
+                  setState(() => _selected = updated);
+                  widget.onCategoryChange(updated);
+                },
                 child: Text(labelFor(category)),
               ),
           ],

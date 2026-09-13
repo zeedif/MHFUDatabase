@@ -3,9 +3,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../domain/enums.dart';
 
 /// Persists the bottom-sheet filter criteria for the list/filter screens that
-/// have one (monsters, items, quests, armor sets, item combinations), so they
-/// survive navigating away and app restarts. The free-text search box is
-/// never persisted here — only structured criteria are.
+/// have one (monsters, items, quests, armor sets, item combinations, weapon
+/// trees), so they survive navigating away and app restarts. The free-text
+/// search box is never persisted here — only structured criteria are.
+/// `WeaponTypeListView` doesn't persist its filter at all.
 class ListFilterPreferences {
   ListFilterPreferences._();
 
@@ -21,6 +22,11 @@ class ListFilterPreferences {
   static const _armorSetHunterTypeKey = 'filter_armor_set_hunter_type';
   static const _armorSetGenderKey = 'filter_armor_set_gender';
   static const _itemCombinationTypeKey = 'filter_item_combination_type';
+  static const _armorSetNumberOfSlotsKey = 'filter_armor_set_number_of_slots';
+  static const _weaponTreeElementTypeKey = 'filter_weapon_tree_element_type';
+  static const _weaponTreeRarityKey = 'filter_weapon_tree_rarity';
+  static const _weaponTreeNumberOfSlotsKey =
+      'filter_weapon_tree_number_of_slots';
 
   late SharedPreferences _prefs;
 
@@ -93,6 +99,12 @@ class ListFilterPreferences {
       ? _prefs.remove(_armorSetGenderKey)
       : _prefs.setString(_armorSetGenderKey, gender.dbValue);
 
+  List<int>? get armorSetNumberOfSlots =>
+      _getIntList(_armorSetNumberOfSlotsKey);
+
+  Future<void> setArmorSetNumberOfSlots(List<int>? numberOfSlots) =>
+      _setIntList(_armorSetNumberOfSlotsKey, numberOfSlots);
+
   ItemCombinationType? get itemCombinationType {
     final raw = _prefs.getString(_itemCombinationTypeKey);
     return raw == null ? null : ItemCombinationType.fromDb(raw);
@@ -102,6 +114,27 @@ class ListFilterPreferences {
       type == null
       ? _prefs.remove(_itemCombinationTypeKey)
       : _prefs.setString(_itemCombinationTypeKey, type.dbValue);
+
+  List<WeaponElement>? get weaponTreeElementType =>
+      _getEnumList(_weaponTreeElementTypeKey, WeaponElement.fromDb);
+
+  Future<void> setWeaponTreeElementType(List<WeaponElement>? elementType) =>
+      _setEnumList(
+        _weaponTreeElementTypeKey,
+        elementType,
+        (elementType) => elementType.dbValue,
+      );
+
+  List<int>? get weaponTreeRarity => _getIntList(_weaponTreeRarityKey);
+
+  Future<void> setWeaponTreeRarity(List<int>? rarity) =>
+      _setIntList(_weaponTreeRarityKey, rarity);
+
+  List<int>? get weaponTreeNumberOfSlots =>
+      _getIntList(_weaponTreeNumberOfSlotsKey);
+
+  Future<void> setWeaponTreeNumberOfSlots(List<int>? numberOfSlots) =>
+      _setIntList(_weaponTreeNumberOfSlotsKey, numberOfSlots);
 
   List<int>? _getIntList(String key) {
     final raw = _prefs.getStringList(key);

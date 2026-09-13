@@ -36,14 +36,15 @@ class _DecorationSelectionViewState extends State<DecorationSelectionView>
   Future<List<Decoration>> fetchItems(String language) =>
       DecorationRepository().getDecorationList(language);
 
-  Future<void> _openFilterSheet() async {
-    final updated = await showModalBottomSheet<DecorationFilter>(
+  Future<void> _openFilterSheet() {
+    return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => _DecorationFilterSheet(filter: _filter),
+      builder: (context) => _DecorationFilterSheet(
+        filter: _filter,
+        onFilterChange: (filter) => setState(() => _filter = filter),
+      ),
     );
-    if (!mounted || updated == null) return;
-    setState(() => _filter = updated);
   }
 
   @override
@@ -80,8 +81,10 @@ class _DecorationSelectionViewState extends State<DecorationSelectionView>
   }
 }
 
-class const _DecorationFilterSheet({required final DecorationFilter filter})
-    extends StatefulWidget {
+class const _DecorationFilterSheet({
+  required final DecorationFilter filter,
+  required final ValueChanged<DecorationFilter> onFilterChange,
+}) extends StatefulWidget {
   @override
   State<_DecorationFilterSheet> createState() => _DecorationFilterSheetState();
 }
@@ -91,7 +94,7 @@ class _DecorationFilterSheetState extends State<_DecorationFilterSheet> {
 
   void _apply(DecorationFilter filter) {
     setState(() => _filter = filter);
-    Navigator.of(context).pop(filter);
+    widget.onFilterChange(filter);
   }
 
   Future<void> _addSkillFilter() async {

@@ -19,6 +19,7 @@ import '../../../../core/widgets/surface_card.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/armor_repository.dart';
 import '../../domain/armor.dart';
+import '../armor_variant_label.dart';
 
 class const ArmorSetDetailView({
   required final int armorSetId,
@@ -152,6 +153,8 @@ class const _ArmorRow({required final Armor armor}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final variant = armorVariantLabel(l10n, armor);
+    final bodySmall = Theme.of(context).textTheme.bodySmall;
 
     return ListItemLayout(
       leading: EntityIcon(
@@ -160,7 +163,13 @@ class const _ArmorRow({required final Armor armor}) extends StatelessWidget {
         tint: rarityColor(armor.rarity),
       ),
       headline: Text(armor.name),
-      supporting: Text(l10n.armorRarity(armor.rarity)),
+      supporting: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.armorRarity(armor.rarity), style: bodySmall),
+          if (variant != null) Text(variant, style: bodySmall),
+        ],
+      ),
       trailing: SlotsIndicator(numberOfSlots: armor.numberOfSlots),
       onTap: () => context.push(AppRoutes.armorDetail(armor.id)),
     );

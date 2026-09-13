@@ -292,11 +292,18 @@ class _SearchViewState extends State<SearchView> {
             size: AppSize.small,
           ),
           name: armor.name,
-          trailing: switch (armor.hunterType) {
-            HunterType.both => l10n.searchArmorBoth,
-            HunterType.blade => l10n.searchArmorBlade,
-            HunterType.gunner => l10n.searchArmorGunner,
-          },
+          trailing: [
+            switch (armor.hunterType) {
+              HunterType.both => l10n.searchArmorBoth,
+              HunterType.blade => l10n.searchArmorBlade,
+              HunterType.gunner => l10n.searchArmorGunner,
+            },
+            switch (armor.gender) {
+              Gender.both => null,
+              Gender.male => l10n.armorSetFilterGenderMale,
+              Gender.female => l10n.armorSetFilterGenderFemale,
+            },
+          ].whereType<String>().join(', '),
           onTap: () => context.push(AppRoutes.armorDetail(armor.id)),
         ),
     ],

@@ -14,6 +14,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../armor/data/armor_repository.dart';
 import '../../../armor/domain/armor_filter.dart';
 import '../../../armor/domain/armor.dart';
+import '../../../armor/presentation/armor_variant_label.dart';
 import '../../../skill/domain/skill.dart';
 import '../widgets/selection_search_bar.dart';
 import 'skill_selection_view.dart';
@@ -43,14 +44,15 @@ class _ArmorSelectionViewState extends State<ArmorSelectionView>
   Future<List<Armor>> fetchItems(String language) =>
       ArmorRepository().getArmorList(language);
 
-  Future<void> _openFilterSheet() async {
-    final updated = await showModalBottomSheet<ArmorFilter>(
+  Future<void> _openFilterSheet() {
+    return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => _ArmorFilterSheet(filter: _filter),
+      builder: (context) => _ArmorFilterSheet(
+        filter: _filter,
+        onFilterChange: (filter) => setState(() => _filter = filter),
+      ),
     );
-    if (!mounted || updated == null) return;
-    setState(() => _filter = updated);
   }
 
   @override
@@ -73,24 +75,37 @@ class _ArmorSelectionViewState extends State<ArmorSelectionView>
       body: FilterableListBody<Armor>(
         items: items,
         filter: _filter.matches,
-        itemBuilder: (context, armor) => PillListItem(
-          child: ListItemLayout(
-            leading: EntityIcon(
-              asset: equipmentTypeIconAsset(armor.type),
-              size: AppSize.medium,
-              tint: rarityColor(armor.rarity),
+        itemBuilder: (context, armor) {
+          final l10n = AppLocalizations.of(context)!;
+          final variant = armorVariantLabel(l10n, armor);
+
+          return PillListItem(
+            child: ListItemLayout(
+              leading: EntityIcon(
+                asset: equipmentTypeIconAsset(armor.type),
+                size: AppSize.medium,
+                tint: rarityColor(armor.rarity),
+              ),
+              headline: Text(armor.name),
+              supporting: variant == null
+                  ? null
+                  : Text(
+                      variant,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+              onTap: () => Navigator.of(context).pop(armor),
             ),
-            headline: Text(armor.name),
-            onTap: () => Navigator.of(context).pop(armor),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 }
 
-class const _ArmorFilterSheet({required final ArmorFilter filter})
-    extends StatefulWidget {
+class const _ArmorFilterSheet({
+  required final ArmorFilter filter,
+  required final ValueChanged<ArmorFilter> onFilterChange,
+}) extends StatefulWidget {
   @override
   State<_ArmorFilterSheet> createState() => _ArmorFilterSheetState();
 }
@@ -100,7 +115,7 @@ class _ArmorFilterSheetState extends State<_ArmorFilterSheet> {
 
   void _apply(ArmorFilter filter) {
     setState(() => _filter = filter);
-    Navigator.of(context).pop(filter);
+    widget.onFilterChange(filter);
   }
 
   Future<void> _addSkillFilter() async {
@@ -125,33 +140,6 @@ class _ArmorFilterSheetState extends State<_ArmorFilterSheet> {
 
     return FilterSheetBody(
       children: [
-        Text(
-          l10n.userSetFilterSkill,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: AppSpacing.medium),
-        Wrap(
-          spacing: AppSpacing.small,
-          runSpacing: AppSpacing.small,
-          children: [
-            for (final skill in skills)
-              SelectionPill(
-                selected: true,
-                onTap: () => _apply(
-                  _filter.copyWith(
-                    skills: skills.where((s) => s.id != skill.id).toList(),
-                  ),
-                ),
-                child: Text(skill.name),
-              ),
-            SelectionPill(
-              selected: false,
-              onTap: _addSkillFilter,
-              child: const Icon(Icons.add),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.large),
         Text(
           l10n.userSetFilterRarity,
           style: Theme.of(context).textTheme.titleMedium,
@@ -197,6 +185,33 @@ class _ArmorFilterSheetState extends State<_ArmorFilterSheet> {
                 ),
                 child: Text('$slots'),
               ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.large),
+        Text(
+          l10n.userSetFilterSkill,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: AppSpacing.medium),
+        Wrap(
+          spacing: AppSpacing.small,
+          runSpacing: AppSpacing.small,
+          children: [
+            for (final skill in skills)
+              SelectionPill(
+                selected: true,
+                onTap: () => _apply(
+                  _filter.copyWith(
+                    skills: skills.where((s) => s.id != skill.id).toList(),
+                  ),
+                ),
+                child: Text(skill.name),
+              ),
+            SelectionPill(
+              selected: false,
+              onTap: _addSkillFilter,
+              child: const Icon(Icons.add),
+            ),
           ],
         ),
       ],

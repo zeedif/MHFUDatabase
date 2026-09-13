@@ -41,4 +41,37 @@ class const WeaponFilter({
     }
     return true;
   }
+
+  WeaponFilter withName(String? name) => WeaponFilter(
+    name: name,
+    weaponType: weaponType,
+    hunterType: hunterType,
+    numberOfSlots: numberOfSlots,
+    rarity: rarity,
+    elementType: elementType,
+  );
+
+  WeaponFilter copyWith({
+    List<WeaponType>? weaponType,
+    List<WeaponElement>? elementType,
+    List<int>? rarity,
+    List<int>? numberOfSlots,
+  }) {
+    return WeaponFilter(
+      name: name,
+      hunterType: hunterType,
+      weaponType: (weaponType ?? this.weaponType)?.isEmpty ?? true
+          ? null
+          : weaponType ?? this.weaponType,
+      elementType: (elementType ?? this.elementType)?.isEmpty ?? true
+          ? null
+          : elementType ?? this.elementType,
+      rarity: (rarity ?? this.rarity)?.isEmpty ?? true
+          ? null
+          : rarity ?? this.rarity,
+      numberOfSlots: (numberOfSlots ?? this.numberOfSlots)?.isEmpty ?? true
+          ? null
+          : numberOfSlots ?? this.numberOfSlots,
+    );
+  }
 }

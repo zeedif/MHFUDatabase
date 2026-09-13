@@ -56,6 +56,7 @@ class const ArmorSetFilter({
   final HunterType? hunterType,
   final Gender? gender,
   final List<SkillTree>? skills,
+  final List<int>? numberOfSlots,
 }) {
   bool matches(ArmorSet armorSet) {
     final name = this.name;
@@ -82,6 +83,13 @@ class const ArmorSetFilter({
         ),
       );
       if (!matchesSkill) return false;
+    }
+    final numberOfSlots = this.numberOfSlots;
+    if (numberOfSlots != null) {
+      final matchesSlots = (armorSet.armors ?? const []).any(
+        (armor) => numberOfSlots.contains(armor.numberOfSlots),
+      );
+      if (!matchesSlots) return false;
     }
     return true;
   }

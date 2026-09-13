@@ -16,11 +16,15 @@ import '../../../../core/widgets/pill_list_item.dart';
 import '../../../../core/widgets/search_filter_app_bar.dart';
 import '../../../../core/widgets/selection_pill.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../skill/domain/skill.dart';
+import '../../../userset/presentation/views/skill_selection_view.dart';
 import '../../data/armor_repository.dart';
 import '../../domain/armor_filter.dart';
 import '../../domain/armor.dart';
+import '../armor_variant_label.dart';
 
 const _armorSetRarities = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const _armorSetSlotOptions = [0, 1, 2, 3];
 
 class const ArmorSetListView({
   required final VoidCallback openDrawer,
@@ -37,6 +41,7 @@ class _ArmorSetListViewState extends State<ArmorSetListView>
     rarity: ListFilterPreferences.instance.armorSetRarity,
     hunterType: ListFilterPreferences.instance.armorSetHunterType,
     gender: ListFilterPreferences.instance.armorSetGender,
+    numberOfSlots: ListFilterPreferences.instance.armorSetNumberOfSlots,
   );
 
   @override
@@ -57,6 +62,7 @@ class _ArmorSetListViewState extends State<ArmorSetListView>
           prefs.setArmorSetRarity(filter.rarity);
           prefs.setArmorSetHunterType(filter.hunterType);
           prefs.setArmorSetGender(filter.gender);
+          prefs.setArmorSetNumberOfSlots(filter.numberOfSlots);
         },
       ),
     );
@@ -77,6 +83,8 @@ class _ArmorSetListViewState extends State<ArmorSetListView>
             rarity: _filter.rarity,
             hunterType: _filter.hunterType,
             gender: _filter.gender,
+            skills: _filter.skills,
+            numberOfSlots: _filter.numberOfSlots,
           ),
         ),
         onGlobalSearch: widget.openSearch,
@@ -85,19 +93,34 @@ class _ArmorSetListViewState extends State<ArmorSetListView>
       body: FilterableListBody<ArmorSet>(
         items: items,
         filter: _filter.matches,
-        itemBuilder: (context, armorSet) => PillListItem(
-          child: ListItemLayout(
-            leading: EntityIcon(
-              asset: 'ic_armor_set',
-              tint: rarityColor(armorSet.rarity),
+        itemBuilder: (context, armorSet) {
+          final l10n = AppLocalizations.of(context)!;
+          final variant = hunterTypeGenderLabel(
+            l10n,
+            hunterType: armorSet.hunterType,
+            gender: armorSet.gender,
+          );
+
+          return PillListItem(
+            child: ListItemLayout(
+              leading: EntityIcon(
+                asset: 'ic_armor_set',
+                tint: rarityColor(armorSet.rarity),
+              ),
+              headline: Text(
+                armorSet.name,
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              supporting: variant == null
+                  ? null
+                  : Text(
+                      variant,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+              onTap: () => context.push(AppRoutes.armorSetDetail(armorSet.id)),
             ),
-            headline: Text(
-              armorSet.name,
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            onTap: () => context.push(AppRoutes.armorSetDetail(armorSet.id)),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -119,10 +142,31 @@ class _ArmorSetFilterSheetState extends State<_ArmorSetFilterSheet> {
     widget.onFilterChange(filter);
   }
 
+  Future<void> _addSkillFilter() async {
+    final skillTree = await Navigator.of(context).push<SkillTree>(
+      MaterialPageRoute(builder: (_) => const SkillSelectionView()),
+    );
+    if (skillTree == null || !mounted) return;
+    final skills = _filter.skills ?? const <SkillTree>[];
+    if (skills.any((skill) => skill.id == skillTree.id)) return;
+    _update(
+      ArmorSetFilter(
+        name: _filter.name,
+        rarity: _filter.rarity,
+        hunterType: _filter.hunterType,
+        gender: _filter.gender,
+        skills: [...skills, skillTree],
+        numberOfSlots: _filter.numberOfSlots,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final rarities = _filter.rarity ?? const <int>[];
+    final skills = _filter.skills ?? const <SkillTree>[];
+    final numberOfSlots = _filter.numberOfSlots ?? const <int>[];
 
     String labelForHunter(HunterType? hunterType) => switch (hunterType) {
       HunterType.blade => l10n.armorSetFilterHunterBlade,
@@ -160,6 +204,8 @@ class _ArmorSetFilterSheetState extends State<_ArmorSetFilterSheet> {
                     rarity: _filter.rarity,
                     hunterType: hunterType,
                     gender: _filter.gender,
+                    skills: _filter.skills,
+                    numberOfSlots: _filter.numberOfSlots,
                   ),
                 ),
                 compact: true,
@@ -186,6 +232,8 @@ class _ArmorSetFilterSheetState extends State<_ArmorSetFilterSheet> {
                     rarity: _filter.rarity,
                     hunterType: _filter.hunterType,
                     gender: gender,
+                    skills: _filter.skills,
+                    numberOfSlots: _filter.numberOfSlots,
                   ),
                 ),
                 compact: true,
@@ -216,11 +264,77 @@ class _ArmorSetFilterSheetState extends State<_ArmorSetFilterSheet> {
                       hunterType: _filter.hunterType,
                       gender: _filter.gender,
                       rarity: updated.isEmpty ? null : updated,
+                      skills: _filter.skills,
+                      numberOfSlots: _filter.numberOfSlots,
                     ),
                   );
                 },
                 child: Text(rarity.toString()),
               ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.large),
+        Text(
+          l10n.userSetFilterNumberOfSlots,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: AppSpacing.medium),
+        Wrap(
+          spacing: AppSpacing.small,
+          runSpacing: AppSpacing.small,
+          children: [
+            for (final slots in _armorSetSlotOptions)
+              SelectionPill(
+                selected: numberOfSlots.contains(slots),
+                onTap: () {
+                  final updated = numberOfSlots.contains(slots)
+                      ? (numberOfSlots.toList()..remove(slots))
+                      : (numberOfSlots.toList()..add(slots));
+                  _update(
+                    ArmorSetFilter(
+                      name: _filter.name,
+                      hunterType: _filter.hunterType,
+                      gender: _filter.gender,
+                      rarity: _filter.rarity,
+                      skills: _filter.skills,
+                      numberOfSlots: updated.isEmpty ? null : updated,
+                    ),
+                  );
+                },
+                child: Text('$slots'),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.large),
+        Text(
+          l10n.userSetFilterSkill,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: AppSpacing.medium),
+        Wrap(
+          spacing: AppSpacing.small,
+          runSpacing: AppSpacing.small,
+          children: [
+            for (final skill in skills)
+              SelectionPill(
+                selected: true,
+                onTap: () => _update(
+                  ArmorSetFilter(
+                    name: _filter.name,
+                    hunterType: _filter.hunterType,
+                    gender: _filter.gender,
+                    rarity: _filter.rarity,
+                    skills: skills.where((s) => s.id != skill.id).toList(),
+                    numberOfSlots: _filter.numberOfSlots,
+                  ),
+                ),
+                child: Text(skill.name),
+              ),
+            SelectionPill(
+              selected: false,
+              onTap: _addSkillFilter,
+              child: const Icon(Icons.add),
+            ),
           ],
         ),
       ],

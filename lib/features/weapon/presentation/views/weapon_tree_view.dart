@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/database/localized_collation.dart';
 import '../../../../core/domain/enums.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../../core/settings/list_filter_preferences.dart';
 import '../../../../core/state/language_fetch_mixin.dart';
 import '../../../../core/theme/app_dimensions.dart';
 import '../../../../core/theme/screen_padding.dart';
@@ -15,7 +16,9 @@ import '../../../../core/widgets/entity_icon.dart';
 import '../../../../core/widgets/search_filter_app_bar.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/weapon_repository.dart';
+import '../../domain/weapon_filter.dart';
 import '../../domain/weapon.dart';
+import '../widgets/weapon_filter_sheet.dart';
 import 'weapon_type_list_view.dart' show weaponTypeLabel;
 
 class const WeaponTreeView({
@@ -30,7 +33,11 @@ class const WeaponTreeView({
 
 class _WeaponTreeViewState extends State<WeaponTreeView>
     with LanguageFetchMixin<FlattenedWeaponNode, WeaponTreeView> {
-  String _query = '';
+  WeaponFilter _filter = WeaponFilter(
+    elementType: ListFilterPreferences.instance.weaponTreeElementType,
+    rarity: ListFilterPreferences.instance.weaponTreeRarity,
+    numberOfSlots: ListFilterPreferences.instance.weaponTreeNumberOfSlots,
+  );
 
   @override
   Future<List<FlattenedWeaponNode>> fetchItems(String language) =>
@@ -38,6 +45,24 @@ class _WeaponTreeViewState extends State<WeaponTreeView>
         WeaponType.fromDb(widget.weaponType),
         language,
       );
+
+  Future<void> _openFilterSheet() {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => WeaponFilterSheet(
+        filter: _filter,
+        onFilterChange: (filter) {
+          setState(() => _filter = filter);
+          final prefs = ListFilterPreferences.instance;
+          prefs.setWeaponTreeElementType(filter.elementType);
+          prefs.setWeaponTreeRarity(filter.rarity);
+          prefs.setWeaponTreeNumberOfSlots(filter.numberOfSlots);
+        },
+        includeWeaponType: false,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,22 +76,25 @@ class _WeaponTreeViewState extends State<WeaponTreeView>
         title: title,
         navigation: AppTopBarNavigation.back,
         onNavigationTap: widget.navigateBack,
-        onQueryChanged: (query) => setState(() => _query = query),
+        onQueryChanged: (query) => setState(
+          () => _filter = _filter.withName(query.isEmpty ? null : query),
+        ),
         onGlobalSearch: widget.openSearch,
+        onFilterTap: _openFilterSheet,
       ),
       body: nodes == null
           ? const Center(child: CircularProgressIndicator())
           : Builder(
               builder: (context) {
-                final query = normalizeForSearch(_query);
+                final isFiltering =
+                    normalizeForSearch(_filter.name ?? '').isNotEmpty ||
+                    _filter.elementType != null ||
+                    _filter.rarity != null ||
+                    _filter.numberOfSlots != null;
 
-                if (query.isNotEmpty) {
+                if (isFiltering) {
                   final filtered = nodes
-                      .where(
-                        (node) => normalizeForSearch(
-                          node.weapon.name,
-                        ).contains(query),
-                      )
+                      .where((node) => _filter.matches(node.weapon))
                       .toList();
 
                   return ListView.separated(
@@ -150,9 +178,8 @@ class _WeaponTreeViewState extends State<WeaponTreeView>
 
 const _minTileWidth = 260.0;
 
-/// Draws the ancestor guide lines and the elbow connecting a tree node to
-/// its parent, mimicking a file-explorer style tree instead of raw
-/// indentation.
+/// Draws the ancestor guide lines and the elbow connecting a node to its
+/// parent.
 class _TreeGuides extends StatelessWidget {
   const _TreeGuides({
     required this.depth,

@@ -13,6 +13,7 @@ import '../../../../core/widgets/list_item_layout.dart';
 import '../../../../core/widgets/mhfu_colors.dart';
 import '../../../../core/widgets/pill_list_item.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../armor/presentation/armor_variant_label.dart';
 import '../../data/user_equipment_set_repository.dart';
 import '../../domain/user_equipment_set.dart';
 
@@ -167,6 +168,12 @@ class _UserSetListViewState extends State<UserSetListView> {
             separatorBuilder: (context, index) => const AppHDivider(),
             itemBuilder: (context, index) {
               final set = sets[index];
+              final variant = hunterTypeGenderLabel(
+                l10n,
+                hunterType: set.hunterType,
+                gender: set.gender,
+              );
+
               return PillListItem(
                 child: ListItemLayout(
                   leading: EntityIcon(
@@ -176,6 +183,12 @@ class _UserSetListViewState extends State<UserSetListView> {
                   headline: Text(
                     set.name.isEmpty ? l10n.userSetCreate : set.name,
                   ),
+                  supporting: variant == null
+                      ? null
+                      : Text(
+                          variant,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                   onTap: () => context.push(
                     AppRoutes.userEquipmentSetDetail(
                       set.id,

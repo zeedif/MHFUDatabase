@@ -18,6 +18,7 @@ import '../../../../core/widgets/surface_card.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/armor_repository.dart';
 import '../../domain/armor.dart';
+import '../armor_variant_label.dart';
 
 class const ArmorDetailView({
   required final int armorId,
@@ -78,7 +79,10 @@ class _ArmorDetailViewState extends State<ArmorDetailView> {
                     tint: rarityColor(armor.rarity),
                   ),
                   title: armor.name,
-                  subtitle: l10n.armorRarity(armor.rarity),
+                  subtitle: [
+                    l10n.armorRarity(armor.rarity),
+                    armorVariantLabel(l10n, armor),
+                  ].whereType<String>().join(' · '),
                   description: armor.description,
                 ),
               ),
